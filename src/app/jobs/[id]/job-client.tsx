@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type JobPayload = {
   id: string;
@@ -25,17 +25,25 @@ export default function JobClient({ jobId }: { jobId: string }) {
   const [job, setJob] = useState<JobPayload | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     const response = await fetch(`/api/jobs/${jobId}`, { cache: "no-store" });
     if (response.ok) setJob(await response.json());
-  }
+  }, [jobId]);
 
   useEffect(() => {
+    let isActive = true;
+    async function tick() {
+      if (!isActive) return;
+      await load();
+    }
     fetch(`/api/jobs/${jobId}`, { method: "POST" }).catch(() => {});
-    load();
-    const timer = window.setInterval(load, 1500);
-    return () => window.clearInterval(timer);
-  }, [jobId]);
+    window.setTimeout(tick, 0);
+    const timer = window.setInterval(tick, 1500);
+    return () => {
+      isActive = false;
+      window.clearInterval(timer);
+    };
+  }, [jobId, load]);
 
   async function publish() {
     if (!job?.game) return;
