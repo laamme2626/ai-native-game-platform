@@ -8,12 +8,14 @@ export default function GameMetricButtons({
   likeCount,
   favoriteCount,
   isFavorite = false,
+  dark = false,
 }: {
   gameId: string;
   playCount: number;
   likeCount: number;
   favoriteCount: number;
   isFavorite?: boolean;
+  dark?: boolean;
 }) {
   const [counts, setCounts] = useState({ playCount, likeCount, favoriteCount });
   const [favorite, setFavorite] = useState(isFavorite);
@@ -53,32 +55,41 @@ export default function GameMetricButtons({
     setMessage(payload.isFavorite ? "已加入我的收藏" : "已取消收藏");
   }
 
+  const chip = dark
+    ? "border-white/10 bg-white/8 text-slate-200 hover:bg-white/12"
+    : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50";
+  const active = dark
+    ? "border-cyan-300/40 bg-cyan-300/15 text-cyan-100"
+    : "border-blue-600 bg-blue-50 text-blue-700";
+
   return (
     <div>
-      <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-        <span className="rounded-full bg-slate-100 px-2 py-1">
+      <div className="flex flex-wrap gap-2 text-xs font-bold">
+        <span className={`rounded-full border px-2.5 py-1 ${chip}`}>
           游玩 {counts.playCount}
         </span>
         <button
           type="button"
           onClick={() => update("like")}
-          className="rounded-full border border-slate-300 bg-white px-2 py-1 text-slate-900 hover:bg-slate-50"
+          className={`rounded-full border px-2.5 py-1 transition ${chip}`}
         >
           点赞 {counts.likeCount}
         </button>
         <button
           type="button"
           onClick={toggleFavorite}
-          className={`rounded-full border px-2 py-1 hover:bg-slate-50 ${
-            favorite
-              ? "border-blue-600 bg-blue-50 text-blue-700"
-              : "border-slate-300 bg-white text-slate-900"
+          className={`rounded-full border px-2.5 py-1 transition ${
+            favorite ? active : chip
           }`}
         >
           {favorite ? "已收藏" : "收藏"} {counts.favoriteCount}
         </button>
       </div>
-      {message ? <p className="mt-2 text-xs text-blue-700">{message}</p> : null}
+      {message ? (
+        <p className={`mt-2 text-xs font-medium ${dark ? "text-cyan-100" : "text-blue-700"}`}>
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -88,7 +88,7 @@ export default function GameOwnerActions({
         )}
         {sourceJobId ? (
           <a href={`/jobs/${sourceJobId}`} className={buttonClass("secondary")}>
-            查看生成任务
+            生成任务
           </a>
         ) : null}
         {showRemix ? (
@@ -103,12 +103,12 @@ export default function GameOwnerActions({
         <button
           disabled={isBusy}
           onClick={deleteGame}
-          className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-600"
+          className={`${buttonClass("danger")} disabled:bg-slate-300 disabled:text-slate-600`}
         >
           删除
         </button>
       </div>
-      {message ? <p className="text-sm text-blue-700">{message}</p> : null}
+      {message ? <p className="text-sm font-medium text-blue-700">{message}</p> : null}
     </div>
   );
 }

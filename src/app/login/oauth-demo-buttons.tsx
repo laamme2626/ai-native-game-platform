@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClass } from "@/components/ui";
 
 export default function OAuthDemoButtons() {
   const [message, setMessage] = useState("");
@@ -12,7 +13,7 @@ export default function OAuthDemoButtons() {
           onClick={() =>
             setMessage("GitHub 登录 Demo 暂未接入，文档已说明 OAuth 回调和账号绑定设计。")
           }
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+          className={buttonClass("secondary")}
         >
           GitHub 登录
         </button>
@@ -21,13 +22,13 @@ export default function OAuthDemoButtons() {
           onClick={() =>
             setMessage("Google 登录 Demo 暂未接入，文档已说明 OAuth 回调和账号绑定设计。")
           }
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+          className={buttonClass("secondary")}
         >
           Google 登录
         </button>
       </div>
       {message ? (
-        <p className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+        <p className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm font-medium text-blue-800">
           {message}
         </p>
       ) : null}
