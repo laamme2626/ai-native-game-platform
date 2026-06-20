@@ -24,14 +24,23 @@ model User {
 model Game {
   id          String          @id @default(cuid())
   ownerId     String
+  parentGameId String?
+  version     Int             @default(1)
   title       String
   description String
   prompt      String
+  tags        String          @default("")
   status      String          @default("draft")
   manifestUrl String
   entryUrl    String
   specUrl     String
-  thumbnail   String?
+  coverUrl    String?
+  assetName   String?
+  assetUrl    String?
+  assetType   String?
+  playCount   Int             @default(0)
+  likeCount   Int             @default(0)
+  favoriteCount Int           @default(0)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   publishedAt DateTime?
@@ -40,6 +49,7 @@ model Game {
 
   @@index([status, publishedAt])
   @@index([ownerId])
+  @@index([parentGameId])
 }
 
 model GenerationJob {
@@ -49,6 +59,13 @@ model GenerationJob {
   prompt    String
   status    String     @default("queued")
   error     String?
+  assetName String?
+  assetUrl  String?
+  assetType String?
+  assetSize Int?
+  estimatedTokens Int   @default(0)
+  estimatedCostCents Int @default(0)
+  generationStepsCount Int @default(0)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -62,6 +79,7 @@ model GenerationJob {
 model AgentLog {
   id        String        @id @default(cuid())
   jobId     String
+  agentName String        @default("Agent Orchestrator")
   level     String        @default("info")
   message   String
   metadata  Json?

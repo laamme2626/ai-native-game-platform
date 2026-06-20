@@ -8,7 +8,7 @@ export default async function RegisterPage({
   const params = await searchParams;
   return (
     <main className="mx-auto max-w-md px-5 py-12">
-      <h1 className="text-3xl font-semibold">Register</h1>
+      <h1 className="text-3xl font-semibold">注册</h1>
       {params.error ? (
         <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {params.error}
@@ -20,7 +20,7 @@ export default async function RegisterPage({
         className="mt-6 grid gap-4 rounded-lg border border-slate-200 bg-white p-5"
       >
         <label className="grid gap-2 text-sm font-medium">
-          Email
+          邮箱
           <input
             name="email"
             type="email"
@@ -29,7 +29,7 @@ export default async function RegisterPage({
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Password
+          密码
           <input
             name="password"
             type="password"
@@ -39,13 +39,13 @@ export default async function RegisterPage({
           />
         </label>
         <button className="rounded-md bg-slate-900 px-4 py-3 text-white">
-          Create account
+          创建账号
         </button>
       </form>
       <p className="mt-4 text-sm text-slate-600">
-        Already registered?{" "}
+        已有账号？{" "}
         <Link href="/login" className="font-medium text-slate-900">
-          Login
+          登录
         </Link>
       </p>
     </main>

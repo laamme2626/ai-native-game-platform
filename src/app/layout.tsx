@@ -25,19 +25,25 @@ export default async function RootLayout({
             </Link>
             <div className="flex items-center gap-3 text-sm">
               <Link href="/" className="rounded-md px-3 py-2 hover:bg-slate-100">
-                Home
+                首页
               </Link>
               {user ? (
                 <>
                   <Link
                     href="/create"
-                    className="rounded-md bg-slate-900 px-3 py-2 text-white hover:bg-slate-700"
+                    className="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
                   >
-                    Create
+                    创建游戏
+                  </Link>
+                  <Link
+                    href="/my"
+                    className="rounded-md px-3 py-2 hover:bg-slate-100"
+                  >
+                    我的作品
                   </Link>
                   <form action="/api/auth/logout" method="post">
                     <button className="rounded-md px-3 py-2 hover:bg-slate-100">
-                      Logout
+                      退出登录
                     </button>
                   </form>
                 </>
@@ -47,13 +53,13 @@ export default async function RootLayout({
                     href="/login"
                     className="rounded-md px-3 py-2 hover:bg-slate-100"
                   >
-                    Login
+                    登录
                   </Link>
                   <Link
                     href="/register"
-                    className="rounded-md bg-slate-900 px-3 py-2 text-white hover:bg-slate-700"
+                    className="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
                   >
-                    Register
+                    注册
                   </Link>
                 </>
               )}

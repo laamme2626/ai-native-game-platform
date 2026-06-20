@@ -1,37 +1,76 @@
-# Delivery Status
+# 交付状态
 
-## Complete
+## 已完成
 
-- Next.js App Router project initialized.
-- Prisma SQLite schema with `User`, `Game`, `GenerationJob`, and `AgentLog`.
-- Email/password registration, login, and logout.
-- Cookie session auth.
-- Home page showing published games.
-- Seed script creates a demo user and 3 published games.
-- Create page creates generation jobs.
-- Job detail page polls status and Agent logs.
-- Backend generation creates constrained `game_spec.json`, `manifest.json`, and
-  runnable `index.html`.
-- Local object-storage simulation under `public/generated/games`.
-- Draft preview and publish flow.
-- Play page loads database meta, fetches manifest, and runs sandbox iframe.
+- 全站主要用户文案中文化。
+- 邮箱注册、登录、退出登录。
+- 登录状态刷新保持。
+- GitHub / Google 第三方登录 Demo 入口。
+- 首页 published 游戏展示、搜索、标签筛选。
+- 游戏卡片统计：游玩、点赞、收藏。
+- `/games/[id]` 游戏详情页。
+- `/my` 我的作品页和生成任务历史。
+- Create prompt 长度限制、素材上传、类型和大小校验。
+- generation job、Agent logs、失败重试、成功预览/发布。
+- 多 Agent 角色日志。
+- 模拟 tokens、cost、steps。
+- 主题化 fallback generator。
+- 本地 storage mock 保存上传素材和生成产物。
+- Play 动态加载 manifest/entry，sandbox iframe 运行。
+- fromJob 预览返回任务 / 发布 / 返回首页。
+- 发布、取消发布、Remix 派生。
 
-## Verification
+## 部分完成 / Mock
 
-- `npm run db:seed`: passed.
-- `npm run lint`: passed.
-- `npm run build`: passed.
+- OAuth 是 UI + 文档设计，不接真实 provider。
+- Agent 是本地规则 generator，不接真实 LLM。
+- 内容审核是关键词 Demo，不是生产 moderation。
+- 成本统计是模拟值。
+- 对象存储是本地 public 目录 mock。
+- Remix 复制产物 URL 和 meta，不提供完整编辑器。
 
-## Demo Account
+这些不影响 Demo 主链路验收。
 
-```text
-demo@yahaha.local
-password123
+## 未完成
+
+- 真实异步队列。
+- 真实云对象存储。
+- 真实 LLM 生成。
+- 端到端自动化测试。
+- 用户级点赞/收藏去重。
+- 删除游戏。
+
+## 如果再给 1 周
+
+- 接入队列和 worker。
+- 接入真实 LLM，并保留 schema 校验。
+- 接入 MinIO/S3/OSS。
+- 增加 Playwright 主链路测试。
+- 增加 quota、rate limit、CSRF。
+- 做完整 Remix 编辑器和版本 diff。
+
+## 主链路验收
+
+1. 注册或登录。
+2. 进入创建游戏。
+3. 输入创意并上传素材。
+4. 查看生成任务、日志和成本统计。
+5. 预览生成游戏。
+6. 发布。
+7. 回首页搜索或筛选找到游戏。
+8. 进入详情页，点赞、收藏、开始游玩。
+9. 在我的作品中取消发布或 Remix。
+
+## 测试命令
+
+```bash
+npm run db:seed
+npm run lint
+npm run build
 ```
 
-## Next Practical Steps
+最近一次结果：
 
-- Add Playwright smoke tests for register, create, preview, publish, and play.
-- Replace deterministic Agent with LLM-backed spec generation behind the same
-  validation boundary.
-- Move storage implementation to MinIO/S3/OSS.
+- `npm run db:seed`：通过
+- `npm run lint`：通过
+- `npm run build`：通过

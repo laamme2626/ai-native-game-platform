@@ -1,53 +1,76 @@
-# Yahaha MVP
+# Yahaha AI Native 互动游戏平台 MVP
 
-AI native interactive game web platform MVP built with Next.js App Router,
-TypeScript, Tailwind, Prisma, and SQLite.
+一个两天内可交付的 AI Native 互动游戏 Web 平台 Demo。用户注册登录后，可以输入自然语言创意并上传素材，系统创建生成任务，模拟 Multi-Agent 工作流生成受约束的 `game_spec.json`、`manifest.json` 和可运行 `index.html`，用户预览后发布，发布游戏会出现在首页并可在 Web 端游玩。
 
-## Features
+## 技术栈
 
-- Email/password registration and login with an HTTP-only cookie session.
-- Home page lists only published games.
-- Create page submits a natural-language game idea.
-- Generation jobs are stored in SQLite and polled by the browser.
-- The MVP Agent creates a constrained `game_spec.json`, validates it, then
-  renders `manifest.json` and a runnable `index.html`.
-- Generated assets are written through `src/lib/storage.ts` into
-  `public/generated/games/{gameId}/`.
-- Draft games can be previewed and published.
-- Play pages load game meta from SQLite, fetch the generated manifest, and run
-  the entry URL in a sandbox iframe.
+- Next.js App Router + TypeScript
+- Tailwind CSS
+- Prisma 7 + SQLite
+- 本地对象存储 mock：`public/generated`
+- Cookie session 邮箱密码认证
+- 单进程模拟 Agent Orchestrator
 
-## Quick Start
+## 本地启动
 
 ```bash
 npm install
 copy .env.example .env
-npm run setup
+npm run db:generate
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+打开 `http://localhost:3000`。
 
-Seed login:
+Demo 账号：
 
 ```text
 demo@yahaha.local
 password123
 ```
 
-## Commands
+## 常用命令
 
 ```bash
 npm run dev
-npm run build
 npm run lint
+npm run build
+npm run db:generate
 npm run db:migrate
 npm run db:seed
 ```
 
-## Storage
+## 核心功能
 
-The MVP uses local filesystem storage under `public/generated`. The rest of the
-app talks to `src/lib/storage.ts`, so moving to MinIO, S3, OSS, or R2 should be
-implemented behind the same service boundary instead of touching pages or API
-routes.
+- 中文化首页、登录、注册、创建游戏、生成任务、详情、我的作品、游玩页。
+- 邮箱注册、登录、退出登录；刷新后仍通过 cookie session 识别用户。
+- GitHub / Google 第三方登录 Demo 入口，当前不接真实 OAuth。
+- 首页只展示 `published` 游戏，支持搜索和标签筛选。
+- 游戏卡片展示封面占位、标题、简介、作者、标签、发布时间、游玩次数、点赞数、收藏数。
+- 点赞、收藏、游玩次数通过 API 更新数据库。
+- `/games/[id]` 游戏详情页。
+- `/my` 我的作品页，支持预览、发布、取消发布、查看生成任务、Remix 派生。
+- Create 页面支持 prompt 长度限制、素材上传、类型/大小校验。
+- Job Detail 页面轮询状态、展示多 Agent 日志、失败重试、成功预览/发布、产物路径和模拟成本。
+- Play 页面从数据库读取 meta，动态加载本地对象存储 mock 的 manifest/entry，并用 sandbox iframe 运行游戏。
+
+## 验收步骤
+
+1. 运行 `npm run db:seed`，首页应出现 3 个已发布示例游戏。
+2. 使用 Demo 账号登录。
+3. 进入“创建游戏”，输入猫咪/赛博/海盗/校园/太空主题创意并上传一个允许类型文件。
+4. 提交后进入“生成任务”，观察状态和 Agent 日志。
+5. 生成成功后点击“预览”，Play 页应显示返回任务、发布此游戏、返回首页。
+6. 发布后回到首页，能看到新游戏。
+7. 点击详情页，测试点赞、收藏、开始游玩。
+8. 进入“我的作品”，测试取消发布和 Remix 派生。
+
+## Demo / Mock 说明
+
+- 不接真实 OpenAI、Supabase 或云服务。
+- Agent 是本地 fallback generator，按关键词生成不同受控剧情。
+- 第三方登录按钮只展示 Demo 提示。
+- 对象存储用本地 `public/generated` 模拟，代码边界在 `src/lib/storage.ts`，可迁移到 MinIO / S3 / OSS。
+- 内容审核、成本统计、资源限额均为 Demo 级实现。

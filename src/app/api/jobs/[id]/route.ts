@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const { id } = await params;
 
   const job = await prisma.generationJob.findFirst({
@@ -20,6 +20,9 @@ export async function GET(
           title: true,
           description: true,
           status: true,
+          manifestUrl: true,
+          entryUrl: true,
+          specUrl: true,
         },
       },
       logs: { orderBy: { createdAt: "asc" } },
@@ -35,7 +38,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const { id } = await params;
   const job = await prisma.generationJob.findFirst({
     where: { id, userId: user.id },

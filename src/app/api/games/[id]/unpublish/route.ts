@@ -10,20 +10,12 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const { id } = await params;
 
-  const game = await prisma.game.findFirst({
-    where: { id, ownerId: user.id },
-  });
+  const game = await prisma.game.findFirst({ where: { id, ownerId: user.id } });
   if (!game) return NextResponse.json({ error: "未找到游戏或无权限" }, { status: 404 });
-  if (!game.manifestUrl || !game.entryUrl) {
-    return NextResponse.json(
-      { error: "游戏缺少生成产物，无法发布" },
-      { status: 400 },
-    );
-  }
 
   const updated = await prisma.game.update({
     where: { id },
-    data: { status: "published", publishedAt: new Date() },
+    data: { status: "draft", publishedAt: null },
   });
   return NextResponse.json(updated);
 }

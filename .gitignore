@@ -39,6 +39,8 @@ dev.db
 prisma/dev.db
 public/generated/games/*
 !public/generated/games/.gitkeep
+public/generated/uploads/*
+!public/generated/uploads/.gitkeep
 
 # vercel
 .vercel
