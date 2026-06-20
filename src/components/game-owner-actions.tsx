@@ -60,8 +60,8 @@ export default function GameOwnerActions({
       setMessage(payload?.error ?? "删除失败");
       return;
     }
-    setMessage("删除成功");
-    router.refresh();
+    setMessage("删除成功，正在返回首页...");
+    window.setTimeout(() => router.push("/"), 500);
   }
 
   return (

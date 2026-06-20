@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db";
 import {
   checkPromptSafety,
-  generateConstrainedGameSpec,
   renderGameHtml,
   validateGameSpec,
 } from "@/lib/game-spec";
 import { buildLocalManifest, saveGeneratedGameAssets } from "@/lib/storage";
+import { generateGameSpecWithProvider } from "@/lib/agent/llm-provider";
 
 async function log(
   jobId: string,
@@ -74,13 +74,25 @@ export async function runGenerationJob(jobId: string) {
     const effectivePrompt = sourceGame
       ? `${sourceGame.prompt}\nRemix 修改要求：${job.prompt}`
       : job.prompt;
-    const spec = generateConstrainedGameSpec(effectivePrompt);
+    const result = await generateGameSpecWithProvider(effectivePrompt);
+    const spec = result.spec;
+    await log(jobId, "Game Designer Agent", `使用 ${result.provider} provider 生成 game_spec`);
+    if (result.fallbackReason) {
+      await log(
+        jobId,
+        "QA Validator Agent",
+        "模型输出校验失败，已回退到 fallback generator",
+        { reason: result.fallbackReason },
+        "warn",
+      );
+    }
     if (sourceGame) {
       spec.title = `${sourceGame.title} Remix`;
       spec.description = `${sourceGame.description} Remix 修改：${job.prompt}`;
       spec.tags = Array.from(new Set([...sourceGame.tags.split(",").filter(Boolean), ...spec.tags]));
     }
-    await log(jobId, "Game Designer Agent", "识别主题 / 角色 / 风格", {
+    await log(jobId, "Requirement Parser Agent", "识别游戏类型 / 主题 / 角色 / 风格", {
+      type: spec.type,
       theme: spec.theme,
       protagonist: spec.protagonist,
       visualStyle: spec.visualStyle,
@@ -91,10 +103,12 @@ export async function runGenerationJob(jobId: string) {
       endings: spec.endingSceneIds.length,
       items: spec.items,
     });
-    await log(jobId, "Game Designer Agent", "生成 game_spec.json");
+    await log(jobId, "Game Designer Agent", "生成多类型 game_spec.json");
 
     validateGameSpec(spec);
-    await log(jobId, "Safety Check Agent", "校验 game_spec 通过");
+    await log(jobId, "QA Validator Agent", "校验 game_spec schema 和可玩目标通过", {
+      type: spec.type,
+    });
 
     const game = await prisma.game.create({
       data: {
@@ -123,8 +137,9 @@ export async function runGenerationJob(jobId: string) {
       assetUrl: job.assetUrl,
     });
     const html = renderGameHtml(spec, job.assetUrl);
-    await log(jobId, "Manifest Builder Agent", "生成 manifest.json 和 index.html", {
+    await log(jobId, "Runtime Builder Agent", "根据 game_spec.type 生成 manifest.json 和 index.html", {
       manifestSchemaVersion: manifest.schemaVersion,
+      gameType: spec.type,
     });
 
     const saved = await saveGeneratedGameAssets({

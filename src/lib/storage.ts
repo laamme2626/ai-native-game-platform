@@ -1,5 +1,5 @@
 import path from "path";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, rm, writeFile } from "fs/promises";
 
 export type StoredGameAsset = {
   specUrl: string;
@@ -115,4 +115,9 @@ export function buildLocalManifest(params: {
     assetUrl: params.assetUrl ?? undefined,
     createdAt: new Date().toISOString(),
   };
+}
+
+export async function deleteGeneratedGameAssets(gameId: string) {
+  const dir = path.join(generatedRoot, gameId);
+  await rm(dir, { recursive: true, force: true });
 }

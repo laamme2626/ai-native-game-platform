@@ -7,6 +7,7 @@
 - 数据库：Prisma + SQLite 保存用户、游戏、生成任务、Agent 日志。
 - 对象存储 mock：`src/lib/storage.ts` 写入 `public/generated/games` 和 `public/generated/uploads`。
 - Agent Orchestrator：`src/lib/agent.ts` 在单进程内模拟多个 Agent 步骤。
+- LLM Provider：`src/lib/agent/llm-provider.ts` 默认 fallback，可选 OpenAI-compatible 服务端调用。
 
 ## 页面路由
 
@@ -47,7 +48,31 @@
 9. 首页和详情页只展示 published 游戏。
 10. 收藏按钮写入 `Favorite`，我的收藏页按当前用户查询。
 11. Remix 从游戏详情进入 Create，提交修改要求后创建带 `sourceGameId` 的 generation job。
-12. Play 页从 DB 读取 meta，再动态 fetch manifest 并 iframe sandbox 运行 entry。
+12. Play 页从 DB 读取 meta，再动态 fetch manifest 和 entryUrl，并用 iframe sandbox 运行 entry。
+
+## Play 动态加载策略
+
+Play 页面服务端先读取 `Game` meta，客户端依次展示：
+
+1. 正在读取游戏信息
+2. 正在加载 manifest
+3. 正在启动游戏运行环境
+4. 加载成功，游戏运行中
+
+manifest 加载失败会显示错误原因和重新加载按钮。iframe 保留 `sandbox="allow-scripts"`，生成游戏只能在隔离 frame 中运行，不能直接访问平台页面 DOM。
+
+## 多类型小游戏协议
+
+`game_spec.type` 支持：
+
+- `choice_adventure`
+- `quiz`
+- `clicker`
+- `memory`
+- `dodge`
+- `escape_room`
+
+Agent 只生成结构化 `game_spec`。Runtime Builder 使用固定安全模板把 spec 渲染成 `index.html`，不同 type 使用不同原生 HTML/CSS/JS 或 Canvas 玩法，不执行模型自由生成的 JS。
 
 ## 数据模型
 
@@ -82,7 +107,28 @@
 
 ## 删除策略
 
-`DELETE /api/games/[id]` 校验 owner 后删除游戏数据库记录。当前不强制清理 `public/generated/games/*` 历史产物，避免误删本地 mock 文件；生产环境可通过后台清理任务处理孤儿对象。
+删除流程：前端二次确认 → `DELETE /api/games/[id]` 校验 owner → 删除数据库记录 → 调用 storage service 清理 `public/generated/games/{gameId}` → 前端展示删除成功并跳转首页。
+
+上传素材目录当前不做级联清理；生产环境可通过对象存储生命周期或后台任务清理孤儿素材。
+
+## LLM Provider
+
+默认：
+
+```text
+LLM_PROVIDER=fallback
+```
+
+可选：
+
+```text
+LLM_PROVIDER=openai-compatible
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+真实 API 只在服务端 provider 中读取。模型输出必须是 JSON，并通过 `validateGameSpec`；失败时记录 Agent log 并回退 fallback。
 
 ## OAuth 扩展设计
 

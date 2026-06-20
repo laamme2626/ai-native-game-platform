@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type Game = {
@@ -21,6 +21,8 @@ type Manifest = {
   specUrl: string;
 };
 
+type LoadStage = "reading-meta" | "loading-manifest" | "starting-runtime" | "running" | "failed" | "ended";
+
 export default function PlayClient({
   game,
   fromJob,
@@ -30,37 +32,50 @@ export default function PlayClient({
 }) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [error, setError] = useState("");
-  const [isManifestLoading, setIsManifestLoading] = useState(true);
-  const [isFrameLoading, setIsFrameLoading] = useState(true);
+  const [stage, setStage] = useState<LoadStage>("reading-meta");
   const [frameKey, setFrameKey] = useState(0);
-  const [isEnded, setIsEnded] = useState(false);
   const [publishMessage, setPublishMessage] = useState("");
 
   const loadManifest = useCallback(async () => {
-    setIsManifestLoading(true);
-    setIsFrameLoading(true);
+    setStage("loading-manifest");
     setError("");
     setManifest(null);
-    fetch(game.manifestUrl)
-      .then((response) => {
-        if (!response.ok) throw new Error(`manifest 加载失败：${response.status}`);
-        return response.json();
-      })
-      .then((payload) => setManifest(payload))
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setIsManifestLoading(false));
+    try {
+      const response = await fetch(game.manifestUrl);
+      if (!response.ok) throw new Error(`manifest 加载失败：${response.status}`);
+      const payload = (await response.json()) as Manifest;
+      setManifest(payload);
+      setStage("starting-runtime");
+      setFrameKey((value) => value + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "manifest 加载失败");
+      setStage("failed");
+    }
   }, [game.manifestUrl]);
 
   useEffect(() => {
-    window.setTimeout(loadManifest, 0);
+    const timer = window.setTimeout(loadManifest, 150);
+    return () => window.clearTimeout(timer);
+  }, [loadManifest]);
+
+  useEffect(() => {
     fetch(`/api/games/${game.id}/metrics`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "play" }),
     }).catch(() => {});
-  }, [game.id, loadManifest]);
+  }, [game.id]);
 
   const entryUrl = manifest?.entry.url ?? game.entryUrl;
+  const stageItems = useMemo(
+    () => [
+      ["reading-meta", "正在读取游戏信息"],
+      ["loading-manifest", "正在加载 manifest"],
+      ["starting-runtime", "正在启动游戏运行环境"],
+      ["running", "加载成功，游戏运行中"],
+    ],
+    [],
+  );
 
   async function publish() {
     setPublishMessage("");
@@ -94,6 +109,7 @@ export default function PlayClient({
           </Link>
         </div>
       </div>
+
       {fromJob ? (
         <section className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p className="text-sm text-blue-800">你正在从生成任务预览此游戏。</p>
@@ -125,12 +141,28 @@ export default function PlayClient({
         </section>
       ) : null}
 
+      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div className="grid gap-2 sm:grid-cols-4">
+          {stageItems.map(([key, label]) => (
+            <div
+              key={key}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                stage === key
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-slate-200 bg-slate-50 text-slate-500"
+              }`}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           onClick={() => {
+            setStage("starting-runtime");
             setFrameKey((value) => value + 1);
-            setIsFrameLoading(true);
-            setIsEnded(false);
           }}
           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
         >
@@ -143,22 +175,27 @@ export default function PlayClient({
           重新加载
         </button>
         <button
-          onClick={() => setIsEnded(true)}
+          onClick={() => setStage("ended")}
           className="rounded-md bg-orange-600 px-3 py-2 text-sm text-white hover:bg-orange-700"
         >
           退出 / 游戏结束
         </button>
       </div>
 
-      {isManifestLoading ? (
-        <div className="grid h-[72vh] place-items-center rounded-lg border border-slate-300 bg-white text-slate-500">
-          正在加载 manifest 和游戏入口...
+      {stage === "reading-meta" || stage === "loading-manifest" ? (
+        <LoadingPanel text={stage === "reading-meta" ? "正在读取游戏信息..." : "正在加载 manifest..."} />
+      ) : stage === "failed" ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
+          <h2 className="text-lg font-semibold">加载失败</h2>
+          <p className="mt-2 text-sm">{error}</p>
+          <button
+            onClick={loadManifest}
+            className="mt-4 rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            重新加载
+          </button>
         </div>
-      ) : error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          加载失败：{error}
-        </p>
-      ) : isEnded ? (
+      ) : stage === "ended" ? (
         <div className="grid h-[72vh] place-items-center rounded-lg border border-slate-300 bg-white">
           <div className="text-center">
             <h2 className="text-2xl font-semibold">游戏已结束</h2>
@@ -167,9 +204,9 @@ export default function PlayClient({
         </div>
       ) : (
         <div className="relative">
-          {isFrameLoading ? (
-            <div className="absolute inset-0 z-10 grid place-items-center rounded-lg border border-slate-300 bg-white text-slate-500">
-              正在载入游戏...
+          {stage === "starting-runtime" ? (
+            <div className="absolute inset-0 z-10">
+              <LoadingPanel text="正在启动游戏运行环境..." />
             </div>
           ) : null}
           <iframe
@@ -177,11 +214,24 @@ export default function PlayClient({
             title={manifest?.title ?? game.title}
             src={entryUrl}
             sandbox="allow-scripts"
-            onLoad={() => setIsFrameLoading(false)}
+            onLoad={() => setStage("running")}
             className="h-[72vh] w-full rounded-lg border border-slate-300 bg-white"
           />
         </div>
       )}
     </main>
+  );
+}
+
+function LoadingPanel({ text }: { text: string }) {
+  return (
+    <div className="grid h-[72vh] place-items-center rounded-lg border border-slate-300 bg-white">
+      <div className="w-full max-w-sm px-6 text-center">
+        <div className="mb-4 h-3 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-blue-500" />
+        </div>
+        <p className="text-sm text-slate-600">{text}</p>
+      </div>
+    </div>
   );
 }

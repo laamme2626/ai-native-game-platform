@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { deleteGeneratedGameAssets } from "@/lib/storage";
 
 export async function DELETE(
   _request: Request,
@@ -14,5 +15,6 @@ export async function DELETE(
   if (!game) return NextResponse.json({ error: "未找到游戏或无权限" }, { status: 404 });
 
   await prisma.game.delete({ where: { id } });
+  await deleteGeneratedGameAssets(id);
   return NextResponse.json({ ok: true });
 }

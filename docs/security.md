@@ -30,10 +30,12 @@
 - `.env` 被 gitignore。
 - `.env.example` 只放占位值。
 - 不应提交真实 OAuth、LLM、对象存储密钥。
+- `OPENAI_API_KEY` 只允许服务端 provider 读取。
+- 客户端组件不能读取模型密钥，不能使用 `NEXT_PUBLIC_` 前缀暴露模型密钥。
 
 ## 资源限制和成本统计
 
-当前 prompt 长度、上传大小、estimated tokens/cost 都是 Demo 级限制。生产环境应接入：
+当前 prompt 长度、上传大小、estimated tokens/cost 都是 Demo 级限制。可选真实 LLM 输出仍必须通过 schema 校验，失败回退 fallback。生产环境应接入：
 
 - 用户级 quota。
 - IP / 用户限流。
@@ -43,7 +45,7 @@
 
 ## 为什么不用模型直接生成代码
 
-直接执行模型生成代码会扩大 XSS、数据泄漏、无限循环、恶意外链等风险。MVP 使用 `game_spec` 作为中间层，由可信模板渲染互动逻辑，既能 Demo AI Native 生成，也能保持可控安全边界。
+直接执行模型生成代码会扩大 XSS、数据泄漏、无限循环、恶意外链等风险。MVP 使用 `game_spec` 作为中间层，由可信模板渲染互动逻辑，既能 Demo AI Native 生成，也能保持可控安全边界。Play 页面再用 sandbox iframe 隔离运行时代码。
 
 ## OAuth 当前状态
 

@@ -22,15 +22,19 @@
 - fromJob 预览返回任务 / 发布 / 返回首页。
 - 发布、取消发布、删除草稿/作品、Remix 派生。
 - Remix 通过 Create 创建新任务，生成新的 draft，并记录 parent/source 关系。
+- Play 加载状态机：读取信息、加载 manifest、启动运行环境、运行中、失败。
+- 多类型小游戏协议和 runtime：互动剧情、问答、点击、记忆、躲避、密室逃脱。
+- 可选 OpenAI-compatible LLM Provider，默认 fallback。
+- 删除作品后清理 `public/generated/games/{gameId}` 并跳转首页。
 
 ## 部分完成 / Mock
 
 - OAuth 是 UI + 文档设计，不接真实 provider。
-- Agent 是本地规则 generator，不接真实 LLM。
+- Agent 默认是本地规则 generator；真实 LLM provider 是可选配置，未配置 key 时不调用外部服务。
 - 内容审核是关键词 Demo，不是生产 moderation。
 - 成本统计是模拟值。
 - 对象存储是本地 public 目录 mock。
-- 删除游戏当前只删除数据库记录，不清理本地 `public/generated/games/*` 历史产物。
+- 删除游戏会清理本地 `public/generated/games/{gameId}`；上传素材目录仍由后续生命周期任务清理。
 - Remix 是轻量派生，不提供完整差异编辑器。
 
 这些不影响 Demo 主链路验收。
@@ -39,7 +43,7 @@
 
 - 真实异步队列。
 - 真实云对象存储。
-- 真实 LLM 生成。
+- 真实 LLM Provider 只完成 OpenAI-compatible 单 provider；未做多 provider 管理台。
 - 端到端自动化测试。
 - 用户级点赞去重。
 - 完整版本 diff / 协作编辑。
@@ -47,7 +51,7 @@
 ## 如果再给 1 周
 
 - 接入队列和 worker。
-- 接入真实 LLM，并保留 schema 校验。
+- 增加更多 LLM provider、重试策略和模型成本看板。
 - 接入 MinIO/S3/OSS。
 - 增加 Playwright 主链路测试。
 - 增加 quota、rate limit、CSRF。
@@ -70,12 +74,13 @@
 
 ```bash
 npm run db:seed
+npm run db
 npm run lint
 npm run build
 ```
 
 最近一次结果：
 
-- `npm run db:seed`：通过
+- `npm run db`：通过
 - `npm run lint`：通过
 - `npm run build`：通过

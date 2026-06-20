@@ -10,6 +10,7 @@
 - 本地对象存储 mock：`public/generated`
 - Cookie session 邮箱密码认证
 - 单进程模拟 Agent Orchestrator
+- 可选 OpenAI-compatible LLM Provider，默认 fallback
 
 ## 本地启动
 
@@ -40,6 +41,7 @@ npm run build
 npm run db:generate
 npm run db:migrate
 npm run db:seed
+npm run db
 ```
 
 ## 核心功能
@@ -57,6 +59,8 @@ npm run db:seed
 - Create 支持从源游戏发起 Remix，提交修改要求后创建新的 generation job 和 draft 游戏。
 - Job Detail 页面轮询状态、展示多 Agent 日志、失败重试、成功预览/发布、产物路径和模拟成本。
 - Play 页面从数据库读取 meta，动态加载本地对象存储 mock 的 manifest/entry，并用 sandbox iframe 运行游戏。
+- 支持多类型小游戏：互动剧情、问答闯关、点击收集、翻牌记忆、Canvas 躲避、密室逃脱。
+- 默认 fallback mode 无需 API key；配置服务端环境变量后可尝试 OpenAI-compatible provider。
 
 ## 验收步骤
 
@@ -85,7 +89,9 @@ npm run db:seed
 ## Demo / Mock 说明
 
 - 不接真实 OpenAI、Supabase 或云服务。
-- Agent 是本地 fallback generator，按关键词生成不同受控剧情。
+- Agent 默认使用本地 fallback generator，按关键词生成不同类型的受控 game_spec。
+- 如果要启用真实模型，需要自行创建 `.env`，设置 `LLM_PROVIDER=openai-compatible` 和 `OPENAI_API_KEY`，不要提交 `.env`。
+- 部署时应在平台环境变量中配置 API key，不要使用 `NEXT_PUBLIC_` 前缀存放模型密钥。
 - 第三方登录按钮只展示 Demo 提示。
 - 对象存储用本地 `public/generated` 模拟，代码边界在 `src/lib/storage.ts`，可迁移到 MinIO / S3 / OSS。
 - 内容审核、成本统计、资源限额均为 Demo 级实现。
