@@ -26,8 +26,8 @@ export function GameCard({
   const tags = displayTags(game.tags, 4);
 
   return (
-    <Card className="group overflow-hidden bg-white text-slate-950 transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-900/10">
-      <Link href={`/games/${game.id}`} className="block">
+    <Card className="group flex h-full flex-col overflow-hidden bg-white text-slate-950 transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-slate-900/10">
+      <Link href={`/games/${game.id}`} className="block flex-1">
         <GameCover tags={tags} title={game.title} />
         <div className="p-4 sm:p-5">
           <div className="mb-3 flex flex-wrap gap-2">
@@ -51,7 +51,7 @@ export function GameCard({
           </div>
         </div>
       </Link>
-      <div className="border-t border-slate-100 bg-slate-50/80 p-4 sm:p-5">
+      <div className="mt-auto border-t border-slate-100 bg-slate-50/80 p-4 sm:p-5">
         <GameMetricButtons
           gameId={game.id}
           playCount={game.playCount}

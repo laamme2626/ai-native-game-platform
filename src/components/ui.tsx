@@ -18,8 +18,8 @@ export function PageHeader({
   compact?: boolean;
 }) {
   return (
-    <section className={`relative mb-7 overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,#111827_0%,#1e1b4b_52%,#2563eb_100%)] px-5 text-white shadow-2xl shadow-blue-950/15 sm:px-8 ${compact ? "py-6" : "py-8 sm:py-10"}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(96,165,250,.32),transparent_28%),radial-gradient(circle_at_86%_12%,rgba(168,85,247,.22),transparent_30%)]" />
+    <section className={`relative mb-7 overflow-hidden rounded-[24px] border border-slate-800 bg-[linear-gradient(135deg,#111827_0%,#1e1b4b_58%,#1d4ed8_100%)] px-5 text-white shadow-xl shadow-slate-900/10 sm:px-8 ${compact ? "py-6" : "py-8 sm:py-10"}`}>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,.06),transparent_62%)]" />
       <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           {eyebrow ? (
@@ -27,7 +27,7 @@ export function PageHeader({
               {eyebrow}
             </p>
           ) : null}
-          <h1 className={`${compact ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"} max-w-4xl font-black tracking-tight text-balance`}>
+          <h1 className={`${compact ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl"} max-w-4xl font-black tracking-tight text-balance`}>
             {title}
           </h1>
           {description ? (
@@ -111,19 +111,22 @@ export function ButtonLink({
   );
 }
 
-export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "danger" | "ghost";
 
 export function buttonClass(variant: ButtonVariant = "primary") {
   if (variant === "secondary") {
-    return "inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300/80 bg-white px-4 py-2.5 text-sm font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50/50";
+    return "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-slate-950";
+  }
+  if (variant === "outline") {
+    return "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-300 bg-transparent px-4 py-2.5 text-center text-sm font-bold text-slate-900 transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-white hover:text-slate-950";
   }
   if (variant === "danger") {
-    return "inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-orange-600 to-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-orange-300";
+    return "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-red-600 px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm shadow-red-200 transition hover:-translate-y-0.5 hover:bg-red-700 hover:text-white";
   }
   if (variant === "ghost") {
-    return "inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-white/70 hover:text-slate-950";
+    return "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-center text-sm font-bold text-slate-800 transition hover:bg-white hover:text-slate-950";
   }
-  return "inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-300/40 transition hover:-translate-y-0.5 hover:shadow-blue-400/50";
+  return "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-bold text-white shadow-sm shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:text-white";
 }
 
 export function EmptyState({

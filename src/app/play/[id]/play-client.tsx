@@ -210,6 +210,20 @@ export default function PlayClient({
           <div className="px-6 text-center">
             <h2 className="text-3xl font-black text-slate-950">游戏已结束</h2>
             <p className="mt-2 text-slate-600">可以重新开始，或返回首页继续探索。</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => {
+                  setStage("starting-runtime");
+                  setFrameKey((value) => value + 1);
+                }}
+                className={buttonClass("primary")}
+              >
+                重新开始
+              </button>
+              <Link href="/" className={buttonClass("secondary")}>
+                返回首页
+              </Link>
+            </div>
           </div>
         </section>
       ) : (

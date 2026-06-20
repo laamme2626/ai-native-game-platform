@@ -37,10 +37,10 @@ export default async function GameDetailPage({
 
   return (
     <PageShell>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="overflow-hidden">
           <GameCover tags={tags} title={game.title} />
-          <section className="p-5 sm:p-8">
+          <section className="p-5 sm:p-7">
             <div className="mb-4 flex flex-wrap gap-2">
               <Badge tone={game.status === "published" ? "green" : "orange"}>
                 {game.status === "published" ? "已发布" : "草稿"}
@@ -53,14 +53,14 @@ export default async function GameDetailPage({
               ))}
             </div>
 
-            <h1 className="text-balance max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+            <h1 className="text-balance max-w-4xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
               {game.title}
             </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
+            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">
               {game.description}
             </p>
 
-            <dl className="mt-7 grid gap-4 rounded-[22px] border border-slate-200 bg-slate-50/80 p-5 text-sm text-slate-600 sm:grid-cols-2">
+            <dl className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 sm:grid-cols-2">
               <Info label="作者" value={game.owner.email} />
               <Info
                 label="发布时间"

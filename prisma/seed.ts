@@ -36,9 +36,11 @@ const seeds = [
   },
   {
     id: "seed-forest-escape-room",
-    prompt: "魔法森林密室逃脱，找到三个线索后输入关键道具开门",
+    prompt: "古堡钟楼密室逃脱，玩家调查齿轮、钟摆和月光档案，输入关键道具打开塔楼出口",
   },
 ];
+const seedIds = seeds.map((seed) => seed.id);
+const seedJobIds = seeds.map((seed) => `${seed.id}-job`);
 
 async function main() {
   const user = await prisma.user.upsert({
@@ -51,21 +53,54 @@ async function main() {
   });
 
   await prisma.agentLog.deleteMany({
-    where: { job: { userId: user.id } },
+    where: { jobId: { in: seedJobIds } },
   });
-  await prisma.generationJob.deleteMany({ where: { userId: user.id } });
-  await prisma.favorite.deleteMany({ where: { userId: user.id } });
+  await prisma.generationJob.deleteMany({
+    where: {
+      userId: user.id,
+      OR: [{ id: { in: seedJobIds } }, { gameId: { in: seedIds } }],
+    },
+  });
+  await prisma.favorite.deleteMany({ where: { userId: user.id, gameId: { in: seedIds } } });
   await prisma.game.deleteMany({
-    where: { ownerId: user.id, id: { notIn: seeds.map((seed) => seed.id) } },
+    where: {
+      ownerId: user.id,
+      OR: [
+        { id: "seed-forest-escape-room" },
+        { id: "seed-forest-escape-room-duplicate" },
+      ],
+    },
   });
 
   for (const [index, seed] of seeds.entries()) {
-    const job = await prisma.generationJob.create({
-      data: {
+    const jobId = `${seed.id}-job`;
+    const job = await prisma.generationJob.upsert({
+      where: { id: jobId },
+      update: {
+        userId: user.id,
+        prompt: seed.prompt,
+        status: "running",
+        error: null,
+        gameId: null,
+        sourceGameId: null,
+        assetName: null,
+        assetUrl: null,
+        assetType: null,
+        assetSize: null,
+        estimatedTokens: 0,
+        estimatedCostCents: 0,
+        generationStepsCount: 0,
+      },
+      create: {
+        id: jobId,
         userId: user.id,
         prompt: seed.prompt,
         status: "running",
       },
+    });
+
+    await prisma.agentLog.deleteMany({
+      where: { jobId: job.id },
     });
 
     await prisma.agentLog.createMany({
@@ -89,6 +124,58 @@ async function main() {
     });
 
     const spec = generateConstrainedGameSpec(seed.prompt);
+    if (seed.id === "seed-forest-escape-room") {
+      spec.title = "古堡钟楼密室逃脱";
+      spec.description = "在古堡钟楼里调查齿轮、钟摆和月光档案，收集 3 条线索后输入关键道具打开塔楼出口。";
+      spec.theme = "clocktower_escape";
+      spec.protagonist = "一名夜巡档案员";
+      spec.visualStyle = "冷月光、石墙、铜制齿轮和简洁悬疑感";
+      spec.playerGoal = "找到钟楼出口的关键道具并解开塔楼门锁";
+      spec.tags = ["密室逃脱", "逃脱", "解谜", "悬疑", "中等", "5 分钟"];
+      spec.items = ["铜齿轮", "钟摆钥匙", "月光档案"];
+      spec.scenes = [
+        {
+          id: "start",
+          title: "齿轮机房",
+          text: "夜巡档案员进入停摆的古堡钟楼，墙上的铜齿轮缺了一块。",
+          choices: [
+            { label: "检查缺口里的铜粉", nextSceneId: "middle", effects: { 专注: 2 }, item: "铜齿轮" },
+            { label: "沿着钟声回音上楼", nextSceneId: "ally", effects: { 勇气: 2 }, item: "钟摆钥匙" },
+          ],
+        },
+        {
+          id: "middle",
+          title: "停摆钟室",
+          text: "钟摆后方夹着月光档案，档案页写着出口机关的顺序。",
+          choices: [
+            { label: "装回铜齿轮并转动钟摆", nextSceneId: "good_end", effects: { 专注: 1, 勇气: 1 }, item: "月光档案" },
+            { label: "先记录档案再寻找侧门", nextSceneId: "bittersweet_end", effects: { 专注: 2 } },
+          ],
+        },
+        {
+          id: "ally",
+          title: "月光档案室",
+          text: "档案室的窗格投下钥匙形状的光，提示钟摆钥匙并不是普通钥匙。",
+          choices: [
+            { label: "把钟摆钥匙插入月光机关", nextSceneId: "good_end", effects: { 勇气: 2 } },
+            { label: "回到钟室验证档案编号", nextSceneId: "bittersweet_end", effects: { 专注: 2 } },
+          ],
+        },
+        { id: "good_end", title: "理想结局", text: "塔楼出口打开，停摆多年的钟声重新响起。", choices: [] },
+        { id: "bittersweet_end", title: "代价结局", text: "你找到出口，却选择留下整理失落档案。", choices: [] },
+      ];
+      spec.escapeRoom = {
+        roomName: "古堡钟楼",
+        clues: [
+          { id: "clue_0", label: "铜齿轮", text: "铜齿轮背面刻着钟摆的方向。" },
+          { id: "clue_1", label: "钟摆钥匙", text: "钟摆钥匙只能在月光照到时转动。" },
+          { id: "clue_2", label: "月光档案", text: "档案写明关键道具是钟摆钥匙。" },
+        ],
+        puzzles: [
+          { question: "输入关键道具名称打开塔楼出口", answer: "钟摆钥匙", reward: "塔楼出口打开，停摆多年的钟声重新响起。" },
+        ],
+      };
+    }
     validateGameSpec(spec);
     const game = await prisma.game.upsert({
       where: { id: seed.id },
