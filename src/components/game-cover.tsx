@@ -11,39 +11,36 @@ export function GameCover({ tags, title }: { tags: string[]; title: string }) {
   const isMemory = /记忆|配对/.test(text);
   const isEscape = /密室|逃脱/.test(text);
   const visual = isCyber
-    ? ["from-slate-950 via-fuchsia-900 to-cyan-500", "霓虹", "CY"]
+    ? ["from-slate-900 via-blue-800 to-cyan-500", "霓虹"]
     : isMagic
-      ? ["from-emerald-900 via-lime-500 to-amber-200", "魔法", "MG"]
+      ? ["from-emerald-900 via-teal-700 to-amber-300", "魔法"]
       : isPirate
-        ? ["from-amber-950 via-orange-700 to-sky-300", "宝藏", "TR"]
+        ? ["from-amber-900 via-orange-700 to-sky-300", "宝藏"]
         : isSpace
-          ? ["from-indigo-950 via-blue-800 to-cyan-300", "星舰", "SP"]
+          ? ["from-indigo-950 via-blue-800 to-cyan-300", "星舰"]
           : isSchool
-            ? ["from-sky-700 via-blue-200 to-amber-100", "校园", "SC"]
+            ? ["from-sky-700 via-blue-300 to-amber-100", "校园"]
             : isDodge
-              ? ["from-slate-900 via-blue-700 to-orange-400", "闪避", "DG"]
+              ? ["from-slate-900 via-blue-700 to-orange-400", "闪避"]
               : isQuiz
-                ? ["from-violet-950 via-violet-700 to-fuchsia-300", "问答", "QZ"]
+                ? ["from-violet-950 via-violet-700 to-fuchsia-300", "问答"]
                 : isClick
-                  ? ["from-blue-950 via-blue-600 to-emerald-300", "收集", "CK"]
+                  ? ["from-blue-950 via-blue-600 to-emerald-300", "收集"]
                   : isMemory
-                    ? ["from-indigo-950 via-sky-700 to-amber-200", "记忆", "MM"]
+                    ? ["from-indigo-950 via-sky-700 to-amber-200", "记忆"]
                     : isEscape
-                      ? ["from-stone-950 via-slate-700 to-orange-300", "密室", "EX"]
-                      : ["from-blue-900 via-indigo-500 to-emerald-300", "AI", "AI"];
+                      ? ["from-stone-950 via-slate-700 to-orange-300", "密室"]
+                      : ["from-blue-900 via-indigo-600 to-emerald-300", "AI 生成"];
 
   return (
-    <div className={`relative aspect-[16/9] overflow-hidden bg-gradient-to-br ${visual[0]}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_20%,rgba(255,255,255,0.42),transparent_20%),radial-gradient(circle_at_82%_20%,rgba(255,255,255,0.18),transparent_24%),linear-gradient(180deg,transparent_30%,rgba(2,6,23,.72))]" />
-      <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full border border-white/20 bg-white/10 backdrop-blur-md" />
-      <div className="absolute bottom-5 right-5 text-6xl font-black tracking-tighter text-white/18">
-        {visual[2]}
-      </div>
-      <div className="absolute left-4 top-4 rounded-full bg-white/18 px-3 py-1 text-xs font-black text-white ring-1 ring-white/20 backdrop-blur">
+    <div className={`relative h-36 overflow-hidden bg-gradient-to-br ${visual[0]} sm:h-40`}>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,.08),rgba(15,23,42,.55))]" />
+      <div className="absolute right-4 top-4 h-16 w-24 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm" />
+      <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-slate-900 shadow-sm ring-1 ring-white/60">
         {visual[1]}
       </div>
       <div className="absolute bottom-4 left-4 right-4">
-        <p className="line-clamp-2 text-2xl font-black leading-tight text-white drop-shadow">
+        <p className="line-clamp-2 text-xl font-black leading-tight text-white drop-shadow-sm">
           {title}
         </p>
       </div>

@@ -50,23 +50,27 @@ export default async function Home({
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <section className="relative overflow-hidden rounded-[34px] border border-white/70 bg-slate-950 px-5 py-9 text-white shadow-2xl shadow-blue-950/20 sm:px-8 lg:px-10 lg:py-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_22%,rgba(59,130,246,.38),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(168,85,247,.30),transparent_24%),linear-gradient(135deg,rgba(15,23,42,.1),rgba(30,64,175,.28))]" />
-        <div className="absolute right-8 top-8 hidden h-40 w-72 rotate-6 rounded-[28px] border border-white/15 bg-white/10 shadow-2xl backdrop-blur-md lg:block" />
-        <div className="absolute bottom-8 right-28 hidden h-32 w-56 -rotate-3 rounded-[24px] border border-cyan-200/20 bg-cyan-300/10 shadow-2xl backdrop-blur-md lg:block" />
+      <section className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(135deg,#0f172a_0%,#1e1b4b_56%,#1d4ed8_100%)] px-5 py-9 text-white shadow-xl shadow-slate-900/10 sm:px-8 lg:px-10 lg:py-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(96,165,250,.20),transparent_32%),linear-gradient(180deg,rgba(255,255,255,.05),transparent_60%)]" />
         <div className="relative max-w-3xl">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-cyan-200">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">
             AI Native Game Platform
           </p>
-          <h1 className="text-balance text-4xl font-black tracking-tight sm:text-6xl">
+          <h1 className="text-balance text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
             用 AI 生成可玩的互动小游戏
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">
-            输入创意，Agent 自动生成、预览并发布小游戏。像逛游戏商店一样发现作品，也像创作者工作台一样快速迭代。
+          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-100 sm:text-lg">
+            输入一个主题，AI 会生成规则、关卡、界面和可发布的小游戏，让玩家可以直接打开试玩，也让创作者快速迭代作品。
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <ButtonLink href="/create">开始创建</ButtonLink>
-            <ButtonLink href="#games" variant="secondary">
+            <ButtonLink href="/create" className="min-w-28 px-5 shadow-sm shadow-blue-950/20">
+              开始创建
+            </ButtonLink>
+            <ButtonLink
+              href="#games"
+              variant="secondary"
+              className="min-w-28 border-white/80 bg-white px-5 text-slate-950 shadow-sm hover:bg-slate-50"
+            >
               浏览游戏
             </ButtonLink>
           </div>
