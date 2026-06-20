@@ -9,6 +9,7 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const prompt = String(form.get("prompt") ?? "").trim();
+  const sourceGameId = String(form.get("sourceGameId") ?? "").trim() || null;
   if (prompt.length < 10) {
     return NextResponse.json(
       { error: "创意描述至少需要 10 个字符" },
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     data: {
       userId: user.id,
       prompt,
+      sourceGameId,
       status: "queued",
       assetName: upload?.assetName,
       assetUrl: upload?.assetUrl,
@@ -51,8 +53,8 @@ export async function POST(request: Request) {
     data: {
       jobId: job.id,
       agentName: "Agent Orchestrator",
-      message: "生成任务已进入队列",
-      metadata: { promptLength: prompt.length, assetName: upload?.assetName },
+      message: sourceGameId ? "Remix 生成任务已进入队列" : "生成任务已进入队列",
+      metadata: { promptLength: prompt.length, assetName: upload?.assetName, sourceGameId },
     },
   });
 

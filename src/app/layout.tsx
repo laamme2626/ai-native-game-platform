@@ -41,6 +41,12 @@ export default async function RootLayout({
                   >
                     我的作品
                   </Link>
+                  <Link
+                    href="/favorites"
+                    className="rounded-md px-3 py-2 hover:bg-slate-100"
+                  >
+                    我的收藏
+                  </Link>
                   <form action="/api/auth/logout" method="post">
                     <button className="rounded-md px-3 py-2 hover:bg-slate-100">
                       退出登录

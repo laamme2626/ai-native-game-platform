@@ -7,16 +7,19 @@ export default function GameMetricButtons({
   playCount,
   likeCount,
   favoriteCount,
+  isFavorite = false,
 }: {
   gameId: string;
   playCount: number;
   likeCount: number;
   favoriteCount: number;
+  isFavorite?: boolean;
 }) {
   const [counts, setCounts] = useState({ playCount, likeCount, favoriteCount });
+  const [favorite, setFavorite] = useState(isFavorite);
   const [message, setMessage] = useState("");
 
-  async function update(action: "like" | "favorite") {
+  async function update(action: "like") {
     setMessage("");
     const response = await fetch(`/api/games/${gameId}/metrics`, {
       method: "POST",
@@ -28,7 +31,26 @@ export default function GameMetricButtons({
       return;
     }
     setCounts(await response.json());
-    setMessage(action === "like" ? "点赞成功" : "收藏成功");
+    setMessage("点赞成功");
+  }
+
+  async function toggleFavorite() {
+    setMessage("");
+    const response = await fetch(`/api/games/${gameId}/favorite`, {
+      method: "POST",
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      setMessage(payload?.error ?? "请先登录后收藏");
+      return;
+    }
+    setFavorite(payload.isFavorite);
+    setCounts({
+      playCount: payload.playCount,
+      likeCount: payload.likeCount,
+      favoriteCount: payload.favoriteCount,
+    });
+    setMessage(payload.isFavorite ? "已加入我的收藏" : "已取消收藏");
   }
 
   return (
@@ -46,10 +68,14 @@ export default function GameMetricButtons({
         </button>
         <button
           type="button"
-          onClick={() => update("favorite")}
-          className="rounded-full border border-slate-300 bg-white px-2 py-1 text-slate-900 hover:bg-slate-50"
+          onClick={toggleFavorite}
+          className={`rounded-full border px-2 py-1 hover:bg-slate-50 ${
+            favorite
+              ? "border-blue-600 bg-blue-50 text-blue-700"
+              : "border-slate-300 bg-white text-slate-900"
+          }`}
         >
-          收藏 {counts.favoriteCount}
+          {favorite ? "已收藏" : "收藏"} {counts.favoriteCount}
         </button>
       </div>
       {message ? <p className="mt-2 text-xs text-blue-700">{message}</p> : null}

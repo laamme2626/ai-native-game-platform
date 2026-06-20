@@ -14,9 +14,7 @@ export async function POST(
       ? { playCount: { increment: 1 } }
       : action === "like"
         ? { likeCount: { increment: 1 } }
-        : action === "favorite"
-          ? { favoriteCount: { increment: 1 } }
-          : null;
+        : null;
 
   if (!data) {
     return NextResponse.json({ error: "未知统计动作" }, { status: 400 });

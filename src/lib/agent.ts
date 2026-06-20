@@ -45,9 +45,19 @@ export async function runGenerationJob(jobId: string) {
   });
 
   try {
+    const sourceGame = job.sourceGameId
+      ? await prisma.game.findUnique({ where: { id: job.sourceGameId } })
+      : null;
     await log(jobId, "Requirement Parser Agent", "读取用户创意", {
       promptLength: job.prompt.length,
+      sourceGameId: job.sourceGameId,
     });
+    if (sourceGame) {
+      await log(jobId, "Requirement Parser Agent", "读取 Remix 源游戏", {
+        sourceTitle: sourceGame.title,
+        sourceSpecUrl: sourceGame.specUrl,
+      });
+    }
     if (job.assetUrl) {
       await log(jobId, "Requirement Parser Agent", "处理上传素材", {
         assetName: job.assetName,
@@ -61,7 +71,15 @@ export async function runGenerationJob(jobId: string) {
     checkPromptSafety(job.prompt);
     await log(jobId, "Safety Check Agent", "内容安全检查通过");
 
-    const spec = generateConstrainedGameSpec(job.prompt);
+    const effectivePrompt = sourceGame
+      ? `${sourceGame.prompt}\nRemix 修改要求：${job.prompt}`
+      : job.prompt;
+    const spec = generateConstrainedGameSpec(effectivePrompt);
+    if (sourceGame) {
+      spec.title = `${sourceGame.title} Remix`;
+      spec.description = `${sourceGame.description} Remix 修改：${job.prompt}`;
+      spec.tags = Array.from(new Set([...sourceGame.tags.split(",").filter(Boolean), ...spec.tags]));
+    }
     await log(jobId, "Game Designer Agent", "识别主题 / 角色 / 风格", {
       theme: spec.theme,
       protagonist: spec.protagonist,
@@ -81,9 +99,11 @@ export async function runGenerationJob(jobId: string) {
     const game = await prisma.game.create({
       data: {
         ownerId: job.userId,
+        parentGameId: sourceGame?.id,
+        version: sourceGame ? sourceGame.version + 1 : 1,
         title: spec.title,
         description: spec.description,
-        prompt: job.prompt,
+        prompt: effectivePrompt,
         tags: spec.tags.join(","),
         status: "draft",
         manifestUrl: "",

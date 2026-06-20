@@ -42,7 +42,26 @@ export default function GameOwnerActions({
       setMessage(payload?.error ?? "Remix 失败");
       return;
     }
-    router.push(`/play/${payload.gameId}`);
+    router.push(payload.createUrl);
+  }
+
+  async function deleteGame() {
+    const text =
+      status === "draft"
+        ? "确认删除这个草稿吗？该操作不可恢复。"
+        : "确认删除这个已发布游戏吗？该操作不可恢复，并会从首页消失。";
+    if (!window.confirm(text)) return;
+    setIsBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/games/${gameId}`, { method: "DELETE" });
+    const payload = await response.json().catch(() => null);
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload?.error ?? "删除失败");
+      return;
+    }
+    setMessage("删除成功");
+    router.refresh();
   }
 
   return (
@@ -82,6 +101,13 @@ export default function GameOwnerActions({
             Remix 派生
           </button>
         ) : null}
+        <button
+          disabled={isBusy}
+          onClick={deleteGame}
+          className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-600"
+        >
+          删除
+        </button>
       </div>
       {message ? <p className="text-sm text-blue-700">{message}</p> : null}
     </div>

@@ -1,3 +1,5 @@
+import { normalizeTags } from "@/lib/tags";
+
 export type GameSpec = {
   schemaVersion: 1;
   title: string;
@@ -44,7 +46,7 @@ type ThemePack = {
 const packs: ThemePack[] = [
   {
     key: "cat_forest",
-    tags: ["猫咪", "魔法森林", "治愈", "逃脱"],
+    tags: ["互动剧情", "冒险", "逃脱", "魔法", "童话", "可爱", "简单", "3 分钟"],
     title: "魔法森林猫咪逃脱",
     protagonist: "一只勇敢的小猫",
     visualStyle: "柔和童话风，发光蘑菇和月光树影",
@@ -56,7 +58,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "cyber_city",
-    tags: ["赛博", "城市", "解谜", "未来"],
+    tags: ["互动剧情", "解谜", "冒险", "赛博", "未来感", "中等", "3 分钟"],
     title: "霓虹芯片追踪",
     protagonist: "一名城市黑客",
     visualStyle: "高对比霓虹、雨夜街道和透明界面",
@@ -68,7 +70,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "pirate_treasure",
-    tags: ["海盗", "宝藏", "冒险", "风暴"],
+    tags: ["互动剧情", "冒险", "生存", "海盗", "悬疑", "中等", "5 分钟"],
     title: "风暴藏宝图",
     protagonist: "一位年轻船长",
     visualStyle: "海风、旧羊皮纸、铜色罗盘",
@@ -80,7 +82,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "school_exam",
-    tags: ["校园", "考试", "谜题", "青春"],
+    tags: ["互动剧情", "解谜", "校园", "治愈", "简单", "3 分钟"],
     title: "午夜图书馆谜题",
     protagonist: "一名临考学生",
     visualStyle: "清爽校园、粉笔字、夜晚自习灯",
@@ -92,7 +94,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "space_ship",
-    tags: ["太空", "飞船", "科幻", "危机"],
+    tags: ["互动剧情", "冒险", "轻度动作", "太空", "未来感", "困难", "5 分钟"],
     title: "星舰能量核心",
     protagonist: "一名临时舰长",
     visualStyle: "冷白舱灯、星云、全息仪表",
@@ -106,7 +108,7 @@ const packs: ThemePack[] = [
 
 const fallbackPack: ThemePack = {
   key: "mystery",
-  tags: ["互动剧情", "冒险", "AI Native"],
+  tags: ["互动剧情", "冒险", "悬疑", "中等", "3 分钟"],
   title: "回声之门",
   protagonist: "一名意外闯入者",
   visualStyle: "清晰舞台感、柔和光影、神秘符号",
@@ -162,7 +164,7 @@ export function generateConstrainedGameSpec(prompt: string): GameSpec {
     protagonist: pack.protagonist,
     visualStyle: pack.visualStyle,
     playerGoal: pack.goal,
-    tags: pack.tags,
+    tags: normalizeTags(pack.tags),
     items: pack.items,
     stats: [
       { name: "专注", min: 0, max: 10, initial: 5 },

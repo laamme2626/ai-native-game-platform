@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function CreateClient() {
+export default function CreateClient({ sourceGameId }: { sourceGameId?: string }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [asset, setAsset] = useState<File | null>(null);
@@ -21,6 +21,7 @@ export default function CreateClient() {
     setError("");
     const form = new FormData();
     form.set("prompt", prompt);
+    if (sourceGameId) form.set("sourceGameId", sourceGameId);
     if (asset) form.set("asset", asset);
     const response = await fetch("/api/jobs", {
       method: "POST",
@@ -72,7 +73,11 @@ export default function CreateClient() {
           minLength={10}
           rows={9}
           className="resize-none rounded-lg border border-slate-300 bg-white p-4 leading-7"
-          placeholder="例如：生成一个可爱的猫咪逃出魔法森林的互动小游戏，有 3 个场景和 2 个结局，上传图片作为猫咪护符素材..."
+          placeholder={
+            sourceGameId
+              ? "例如：把主角改成狐狸，增加一个隐藏结局，并改成赛博朋克风格..."
+              : "例如：生成一个可爱的猫咪逃出魔法森林的互动小游戏，有 3 个场景和 2 个结局，上传图片作为猫咪护符素材..."
+          }
         />
         <span className="text-xs text-slate-500">
           还可输入 {maxLength - prompt.length} 字
@@ -100,7 +105,7 @@ export default function CreateClient() {
         disabled={isSubmitting}
         className="w-fit rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-600"
       >
-        {isSubmitting ? "正在创建任务..." : "生成游戏"}
+        {isSubmitting ? "正在创建任务..." : sourceGameId ? "生成 Remix" : "生成游戏"}
       </button>
     </form>
   );

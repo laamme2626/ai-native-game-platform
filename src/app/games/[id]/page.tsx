@@ -24,6 +24,13 @@ export default async function GameDetailPage({
   }
 
   const tags = game.tags.split(",").filter(Boolean);
+  const isFavorite = user
+    ? Boolean(
+        await prisma.favorite.findUnique({
+          where: { userId_gameId: { userId: user.id, gameId: game.id } },
+        }),
+      )
+    : false;
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-10">
@@ -71,6 +78,7 @@ export default async function GameDetailPage({
               playCount={game.playCount}
               likeCount={game.likeCount}
               favoriteCount={game.favoriteCount}
+              isFavorite={isFavorite}
             />
             <div className="mt-5 grid gap-3">
               <Link

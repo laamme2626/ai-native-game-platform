@@ -79,7 +79,7 @@ async function main() {
         specUrl: "",
         playCount: 18 + index * 7,
         likeCount: 5 + index * 3,
-        favoriteCount: 3 + index * 2,
+        favoriteCount: 0,
         publishedAt: new Date(Date.now() - index * 3600_000),
       },
     });

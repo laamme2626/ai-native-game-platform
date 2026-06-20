@@ -19,6 +19,7 @@ model User {
   createdAt    DateTime        @default(now())
   games        Game[]
   jobs         GenerationJob[]
+  favorites    Favorite[]
 }
 
 model Game {
@@ -46,6 +47,7 @@ model Game {
   publishedAt DateTime?
   owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   jobs        GenerationJob[]
+  favorites   Favorite[]
 
   @@index([status, publishedAt])
   @@index([ownerId])
@@ -56,6 +58,7 @@ model GenerationJob {
   id        String     @id @default(cuid())
   userId    String
   gameId    String?
+  sourceGameId String?
   prompt    String
   status    String     @default("queued")
   error     String?
@@ -74,6 +77,7 @@ model GenerationJob {
 
   @@index([userId, createdAt])
   @@index([status])
+  @@index([sourceGameId])
 }
 
 model AgentLog {
@@ -87,4 +91,17 @@ model AgentLog {
   job       GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId, createdAt])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([userId, createdAt])
+  @@index([gameId])
 }

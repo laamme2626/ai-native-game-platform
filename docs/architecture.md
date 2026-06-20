@@ -10,12 +10,13 @@
 
 ## 页面路由
 
-- `/` 首页：published 游戏、搜索、标签筛选、统计操作。
+- `/` 首页：published 游戏、搜索、分类标签筛选、统计操作。
 - `/login` `/register`：邮箱密码认证和 OAuth Demo 入口。
 - `/create`：受保护页面，提交 prompt 和素材。
 - `/jobs/[id]`：受保护页面，轮询任务状态和日志。
 - `/games/[id]`：游戏详情页。
 - `/my`：受保护页面，管理我的作品和任务历史。
+- `/favorites`：受保护页面，展示我的收藏。
 - `/play/[id]`：动态加载 manifest/entry 并运行游戏。
 
 ## API 路由
@@ -29,7 +30,9 @@
 - `POST /api/games/[id]/publish`
 - `POST /api/games/[id]/unpublish`
 - `POST /api/games/[id]/metrics`
+- `POST /api/games/[id]/favorite`
 - `POST /api/games/[id]/remix`
+- `DELETE /api/games/[id]`
 
 ## 数据流
 
@@ -42,14 +45,44 @@
 7. 数据库写入 `Game` meta 和产物 URL。
 8. 用户预览、发布。
 9. 首页和详情页只展示 published 游戏。
-10. Play 页从 DB 读取 meta，再动态 fetch manifest 并 iframe sandbox 运行 entry。
+10. 收藏按钮写入 `Favorite`，我的收藏页按当前用户查询。
+11. Remix 从游戏详情进入 Create，提交修改要求后创建带 `sourceGameId` 的 generation job。
+12. Play 页从 DB 读取 meta，再动态 fetch manifest 并 iframe sandbox 运行 entry。
 
 ## 数据模型
 
-- `User`：邮箱、密码 hash、游戏、生成任务。
+- `User`：邮箱、密码 hash、游戏、生成任务、收藏。
 - `Game`：owner、parentGameId、version、标题、简介、标签、状态、manifestUrl、entryUrl、specUrl、素材信息、统计字段。
-- `GenerationJob`：prompt、状态、素材信息、错误、模拟 tokens/cost/steps、关联 game。
+- `GenerationJob`：prompt、sourceGameId、状态、素材信息、错误、模拟 tokens/cost/steps、关联 game。
 - `AgentLog`：job、agentName、level、message、metadata、createdAt。
+- `Favorite`：userId、gameId、createdAt，`@@unique([userId, gameId])` 防止重复收藏。
+
+## 标签体系
+
+标签定义在 `src/lib/tags.ts`，按类型、题材、风格、难度、时长分组。首页筛选直接使用固定 taxonomy，生成器只写入 taxonomy 中的合法标签。后续可迁移为后台可配置表：
+
+- `TagGroup`
+- `Tag`
+- `GameTag`
+
+这样运营可以调整标签显示顺序、上下线标签和多语言文案。
+
+## Remix 派生
+
+当前 Remix 是轻量派生：
+
+1. 详情页点击 Remix。
+2. API 返回 `/create?sourceGameId=...`。
+3. Create 展示源游戏，用户输入修改要求。
+4. `/api/jobs` 创建带 `sourceGameId` 的 generation job。
+5. Agent 读取源游戏 prompt/meta，结合 remix prompt 生成新的 `game_spec`、manifest 和 entry。
+6. 新游戏保存为 draft，并记录 `parentGameId` 和 `version`。
+
+后续可扩展为版本管理、差异对比和多人协作编辑。
+
+## 删除策略
+
+`DELETE /api/games/[id]` 校验 owner 后删除游戏数据库记录。当前不强制清理 `public/generated/games/*` 历史产物，避免误删本地 mock 文件；生产环境可通过后台清理任务处理孤儿对象。
 
 ## OAuth 扩展设计
 

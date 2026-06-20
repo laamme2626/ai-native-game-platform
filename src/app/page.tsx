@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import GameMetricButtons from "@/components/game-metric-buttons";
+import { getCurrentUser } from "@/lib/auth";
+import { tagTaxonomy } from "@/lib/tags";
 
 export default async function Home({
   searchParams,
@@ -8,6 +10,7 @@ export default async function Home({
   searchParams: Promise<{ q?: string; tag?: string }>;
 }) {
   const params = await searchParams;
+  const user = await getCurrentUser();
   const q = params.q?.trim() ?? "";
   const tag = params.tag?.trim() ?? "";
 
@@ -30,13 +33,16 @@ export default async function Home({
     include: { owner: { select: { email: true } } },
   });
 
-  const allGames = await prisma.game.findMany({
-    where: { status: "published" },
-    select: { tags: true },
-  });
-  const tags = Array.from(
-    new Set(allGames.flatMap((game) => game.tags.split(",").filter(Boolean))),
-  ).slice(0, 12);
+  const favoriteIds = user
+    ? new Set(
+        (
+          await prisma.favorite.findMany({
+            where: { userId: user.id, gameId: { in: games.map((game) => game.id) } },
+            select: { gameId: true },
+          })
+        ).map((favorite) => favorite.gameId),
+      )
+    : new Set<string>();
 
   return (
     <main className="mx-auto max-w-6xl px-5 py-10">
@@ -69,7 +75,7 @@ export default async function Home({
         </button>
       </form>
 
-      <div className="mb-8 flex flex-wrap gap-2">
+      <div className="mb-8 grid gap-4 rounded-lg border border-slate-200 bg-white p-4">
         <Link
           href={q ? `/?q=${encodeURIComponent(q)}` : "/"}
           className={`rounded-full border px-3 py-1 text-sm ${
@@ -78,18 +84,27 @@ export default async function Home({
         >
           全部标签
         </Link>
-        {tags.map((item) => (
-          <Link
-            key={item}
-            href={`/?${new URLSearchParams({ ...(q ? { q } : {}), tag: item })}`}
-            className={`rounded-full border px-3 py-1 text-sm ${
-              tag === item
-                ? "border-blue-600 bg-blue-50 text-blue-700"
-                : "border-slate-300 bg-white"
-            }`}
-          >
-            {item}
-          </Link>
+        {tagTaxonomy.map((group) => (
+          <section key={group.group}>
+            <h2 className="mb-2 text-sm font-semibold text-slate-700">
+              {group.group}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {group.tags.map((item) => (
+                <Link
+                  key={item}
+                  href={`/?${new URLSearchParams({ ...(q ? { q } : {}), tag: item })}`}
+                  className={`rounded-full border px-3 py-1 text-sm ${
+                    tag === item
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-slate-300 bg-white"
+                  }`}
+                >
+                  {item}
+                </Link>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
@@ -135,6 +150,7 @@ export default async function Home({
                   playCount={game.playCount}
                   likeCount={game.likeCount}
                   favoriteCount={game.favoriteCount}
+                  isFavorite={favoriteIds.has(game.id)}
                 />
                 <div className="mt-4 flex gap-2">
                   <Link
