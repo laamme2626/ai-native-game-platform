@@ -23,7 +23,10 @@
 - 发布、取消发布、删除草稿/作品、Remix 派生。
 - Remix 通过 Create 创建新任务，生成新的 draft，并记录 parent/source 关系。
 - Play 加载状态机：读取信息、加载 manifest、启动运行环境、运行中、失败。
-- 多类型小游戏协议和 runtime：互动剧情、问答、点击、记忆、躲避、密室逃脱。
+- 多类型小游戏协议和 runtime：互动剧情、5 题问答、随机点击收集、翻牌记忆、渐进式躲避、密室逃脱。
+- fallback generator 会按玩法生成不同标题、简介和标签，非剧情类型不会默认标记为“互动剧情”。
+- Seed 覆盖 6 个稳定示例 ID，重复运行不会制造重复首页作品。
+- `docs/mini-game-design-guide.md` 已记录小游戏设计底线和标签规则。
 - 可选 OpenAI-compatible LLM Provider，默认 fallback。
 - 删除作品后清理 `public/generated/games/{gameId}` 并跳转首页。
 
@@ -81,6 +84,6 @@ npm run build
 
 最近一次结果：
 
-- `npm run db`：通过
-- `npm run lint`：通过
-- `npm run build`：通过
+- `npm.cmd run db:seed`：通过
+- `npm.cmd run lint`：通过
+- `npm.cmd run build`：通过

@@ -170,19 +170,19 @@ function pickPack(prompt: string) {
   const text = prompt.toLowerCase();
   if (/猫|cat|魔法|森林|forest/.test(text)) return packs[0];
   if (/赛博|霓虹|城市|cyber|city|黑客|无人机/.test(text)) return packs[1];
-  if (/海盗|宝藏|pirate|treasure|船|风暴/.test(text)) return packs[2];
-  if (/校园|考试|school|exam|图书馆|社团/.test(text)) return packs[3];
   if (/太空|飞船|space|ship|星舰|宇宙|空间站/.test(text)) return packs[4];
+  if (/海盗|宝藏|pirate|treasure|甲板|风暴|藏宝/.test(text)) return packs[2];
+  if (/校园|考试|school|exam|图书馆|社团/.test(text)) return packs[3];
   return fallbackPack;
 }
 
 function typeTags(type: GameType) {
-  if (type === "quiz") return ["问答", "解谜"];
+  if (type === "quiz") return ["问答", "解谜", "中等", "3 分钟"];
   if (type === "clicker") return ["点击", "收集", "轻度动作", "简单", "1 分钟"];
-  if (type === "memory") return ["记忆", "配对", "解谜"];
-  if (type === "dodge") return ["动作", "躲避", "生存", "困难"];
-  if (type === "escape_room") return ["密室逃脱", "逃脱", "解谜"];
-  return ["互动剧情", "分支选择"];
+  if (type === "memory") return ["记忆", "配对", "解谜", "简单", "3 分钟"];
+  if (type === "dodge") return ["动作", "躲避", "生存", "困难", "1 分钟"];
+  if (type === "escape_room") return ["密室逃脱", "逃脱", "解谜", "中等", "5 分钟"];
+  return ["互动剧情", "分支选择", "冒险", "3 分钟"];
 }
 
 export function generateConstrainedGameSpec(prompt: string): GameSpec {
@@ -207,7 +207,7 @@ function baseSpec(type: GameType, pack: ThemePack): GameSpec {
     schemaVersion: 1,
     type,
     title: type === "choice_adventure" ? pack.title : `${pack.title}${typeTitle(type)}`,
-    description: `${pack.protagonist}将在${pack.scenes.join("、")}中完成目标：${pack.goal}。`,
+    description: typeDescription(type, pack),
     theme: pack.key,
     protagonist: pack.protagonist,
     visualStyle: pack.visualStyle,
@@ -234,6 +234,19 @@ function typeTitle(type: GameType) {
     escape_room: "密室谜题",
   };
   return names[type];
+}
+
+function typeDescription(type: GameType, pack: ThemePack) {
+  const sceneLine = pack.scenes.join("、");
+  const descriptions: Record<GameType, string> = {
+    choice_adventure: `${pack.protagonist}将在${sceneLine}之间做出分支选择，用${pack.items[0]}推动故事走向不同结局。`,
+    quiz: `围绕${pack.scenes[0]}到${pack.scenes[2]}的线索答题闯关，答对关键问题才能完成「${pack.goal}」。`,
+    clicker: `在限时场地里追逐会移动的${pack.items[0]}，避开干扰物并用${pack.items[1]}打出连击。`,
+    memory: `翻开主题卡牌寻找${pack.items[0]}、${pack.items[1]}与${pack.items[2]}的配对线索，在步数耗尽前完成记忆挑战。`,
+    dodge: `操控${pack.protagonist}穿过动态障碍，坚持到倒计时结束并守住「${pack.goal}」的最后机会。`,
+    escape_room: `调查${pack.scenes[2]}里的多个线索，整理道具关系后输入关键答案解锁出口。`,
+  };
+  return descriptions[type];
 }
 
 function makeScenes(pack: ThemePack): GameSpec["scenes"] {
@@ -272,11 +285,38 @@ function makeScenes(pack: ThemePack): GameSpec["scenes"] {
 
 function makeQuiz(pack: ThemePack): NonNullable<GameSpec["quiz"]> {
   return {
-    passScore: 2,
+    passScore: 3,
     questions: [
-      { question: `哪一个道具最能帮助${pack.protagonist}？`, options: [pack.items[0], "普通石头", "空盒子"], answerIndex: 0, explanation: `${pack.items[0]}是关键线索。` },
-      { question: `最终目标是什么？`, options: ["原地等待", pack.goal, "放弃冒险"], answerIndex: 1, explanation: "目标来自用户创意和主题识别。" },
-      { question: `故事的关键地点是哪一个？`, options: [pack.scenes[2], "停车场", "厨房"], answerIndex: 0, explanation: `${pack.scenes[2]}是最后挑战。` },
+      {
+        question: `哪一个道具最能帮助${pack.protagonist}启动冒险？`,
+        options: [pack.items[0], "普通石头", "空盒子", "无字便签"],
+        answerIndex: 0,
+        explanation: `${pack.items[0]}是第一条关键线索。`,
+      },
+      {
+        question: `这局游戏的最终目标是什么？`,
+        options: ["原地等待", pack.goal, "放弃挑战", "隐藏所有线索"],
+        answerIndex: 1,
+        explanation: "目标来自用户创意和主题识别。",
+      },
+      {
+        question: `最后一段挑战主要发生在哪里？`,
+        options: [pack.scenes[2], pack.scenes[0], "停车场", "厨房"],
+        answerIndex: 0,
+        explanation: `${pack.scenes[2]}是最后挑战场景。`,
+      },
+      {
+        question: `哪一个行动最符合当前主题？`,
+        options: [pack.choices[2], "关闭页面", "随机猜测", "把道具全部丢掉"],
+        answerIndex: 0,
+        explanation: `「${pack.choices[2]}」会把道具和目标连接起来。`,
+      },
+      {
+        question: `如果要获得更好的结局，应该重点关注什么？`,
+        options: ["只看倒计时", pack.items[2], "忽略同伴", "重复同一个错误"],
+        answerIndex: 1,
+        explanation: `${pack.items[2]}通常藏着通向结局的补充信息。`,
+      },
     ],
   };
 }
@@ -317,7 +357,7 @@ export function validateGameSpec(spec: GameSpec) {
   if (!spec.playerGoal) throw new Error("game_spec 缺少可玩目标");
 
   if (spec.type === "choice_adventure") validateChoice(spec);
-  if (spec.type === "quiz" && (!spec.quiz || spec.quiz.questions.length < 2)) throw new Error("quiz 至少需要 2 道题");
+  if (spec.type === "quiz" && (!spec.quiz || spec.quiz.questions.length < 5)) throw new Error("quiz 至少需要 5 道题");
   if (spec.type === "clicker" && (!spec.clicker || spec.clicker.targetScore <= 0)) throw new Error("clicker 缺少目标分数");
   if (spec.type === "memory" && (!spec.memory || spec.memory.cards.length < 4)) throw new Error("memory 至少需要 4 张卡");
   if (spec.type === "dodge" && (!spec.dodge || spec.dodge.surviveSeconds <= 0)) throw new Error("dodge 缺少生存时间");
@@ -355,6 +395,12 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
     .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
     .card { min-height: 76px; display: grid; place-items: center; border: 1px solid #cbd5e1; border-radius: 10px; background: white; cursor: pointer; }
     .card.done { background: #dcfce7; border-color: #16a34a; } canvas { width: 100%; max-width: 760px; height: 420px; border-radius: 10px; background: #0f172a; display: block; }
+    .playfield { position: relative; min-height: 330px; overflow: hidden; border: 1px solid #cbd5e1; border-radius: 12px; background: linear-gradient(135deg, #eff6ff, #f8fafc 52%, #ecfeff); }
+    .token { position: absolute; min-width: 92px; min-height: 52px; display: grid; place-items: center; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 28px rgba(15,23,42,.16); transition: transform .12s ease; }
+    .token:hover { transform: scale(1.05); }
+    .token.target { background: #2563eb; border-color: #2563eb; color: white; }
+    .token.bonus { background: #047857; border-color: #047857; color: white; }
+    .token.decoy { background: #fff7ed; border-color: #fb923c; color: #9a3412; }
   </style>
 </head>
 <body>
@@ -406,12 +452,43 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
       draw();
     }
     function renderClicker() {
-      const cfg = spec.clicker; let score = 0, left = cfg.timeLimitSeconds, combo = 1;
-      root.innerHTML = '<div class="panel row"><span>倒计时 <strong id="time">' + left + '</strong> 秒</span><span>分数 <strong id="score">0</strong> / ' + cfg.targetScore + '</span><span>连击 x<strong id="combo">1</strong></span></div><div class="card-grid"><button id="tap" class="card" style="min-height:170px;font-size:24px">收集 ' + cfg.itemLabel + '</button><button id="decoy" class="card" style="min-height:170px">干扰物：不要点</button></div><p id="feedback" class="meta">连续点击目标物会提高连击，点到干扰物会扣分。</p>';
-      const timer = setInterval(() => { left--; document.getElementById("time").textContent = left; if (left <= 0) { clearInterval(timer); end(score >= cfg.targetScore ? '目标达成，收集成功！' : '时间到，分数不足。'); } }, 1000);
+      const cfg = spec.clicker; let score = 0, left = cfg.timeLimitSeconds, combo = 1, running = true;
+      root.innerHTML = '<div class="panel row"><span>倒计时 <strong id="time">' + left + '</strong> 秒</span><span>分数 <strong id="score">0</strong> / ' + cfg.targetScore + '</span><span>连击 x<strong id="combo">1</strong></span></div><div id="field" class="playfield" aria-label="点击收集场地"></div><p id="feedback" class="meta">点击蓝色目标收集得分，绿色奖励加分，橙色干扰物会扣分并重置连击。</p>';
+      const field = document.getElementById("field");
+      const timer = setInterval(() => { left--; document.getElementById("time").textContent = left; if (left <= 0) { running = false; clearInterval(timer); end(score >= cfg.targetScore ? '目标达成，收集成功！' : '时间到，分数不足。'); } }, 1000);
       function sync(msg) { document.getElementById("score").textContent = score; document.getElementById("combo").textContent = combo; document.getElementById("feedback").textContent = msg; }
-      document.getElementById("tap").addEventListener("click", () => { score += combo; combo = Math.min(5, combo + 1); sync('收集到 ' + cfg.itemLabel + '，连击提升。'); if (score >= cfg.targetScore) { clearInterval(timer); end('目标达成，收集成功！'); } });
-      document.getElementById("decoy").addEventListener("click", () => { score = Math.max(0, score - 3); combo = 1; sync('点到了干扰物，扣 3 分并重置连击。'); });
+      function place(button) { button.style.left = Math.round(Math.random() * 74 + 3) + '%'; button.style.top = Math.round(Math.random() * 70 + 8) + '%'; }
+      function spawn() {
+        if (!running) return;
+        field.innerHTML = '';
+        [
+          { kind: 'target', label: cfg.itemLabel, points: combo },
+          { kind: 'bonus', label: cfg.bonusLabel, points: combo + 2 },
+          { kind: 'decoy', label: '干扰物', points: -4 },
+        ].forEach((token) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'token ' + token.kind;
+          button.textContent = token.kind === 'decoy' ? token.label : '+' + token.points + ' ' + token.label;
+          place(button);
+          button.addEventListener('click', () => {
+            if (!running) return;
+            if (token.points > 0) {
+              score += token.points;
+              combo = Math.min(6, combo + 1);
+              sync('收集到 ' + token.label + '，目标重新出现。');
+            } else {
+              score = Math.max(0, score + token.points);
+              combo = 1;
+              sync('点到干扰物，扣 4 分并重置连击。');
+            }
+            if (score >= cfg.targetScore) { running = false; clearInterval(timer); return end('目标达成，收集成功！'); }
+            spawn();
+          });
+          field.appendChild(button);
+        });
+      }
+      spawn();
     }
     function renderMemory() {
       const cfg = spec.memory; let first = null, lock = false, matched = new Set(), moves = 0;
