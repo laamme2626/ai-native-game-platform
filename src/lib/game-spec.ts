@@ -75,7 +75,7 @@ type ThemePack = {
 const packs: ThemePack[] = [
   {
     key: "cat_forest",
-    tags: ["互动剧情", "冒险", "逃脱", "魔法", "童话", "可爱", "简单", "3 分钟"],
+    tags: ["魔法", "森林", "奇幻", "可爱", "简单", "3 分钟"],
     title: "魔法森林猫咪逃脱",
     protagonist: "一只勇敢的小猫",
     visualStyle: "柔和童话风，发光蘑菇和月光树影",
@@ -87,7 +87,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "cyber_city",
-    tags: ["互动剧情", "解谜", "冒险", "赛博", "未来感", "中等", "3 分钟"],
+    tags: ["赛博", "城市", "未来感", "中等", "3 分钟"],
     title: "霓虹芯片追踪",
     protagonist: "一名城市黑客",
     visualStyle: "高对比霓虹、雨夜街道和透明界面",
@@ -99,7 +99,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "pirate_treasure",
-    tags: ["互动剧情", "冒险", "生存", "海盗", "悬疑", "中等", "5 分钟"],
+    tags: ["海盗", "宝藏", "冒险", "中等", "5 分钟"],
     title: "风暴藏宝图",
     protagonist: "一位年轻船长",
     visualStyle: "海风、旧羊皮纸、铜色罗盘",
@@ -111,7 +111,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "school_exam",
-    tags: ["互动剧情", "解谜", "校园", "治愈", "简单", "3 分钟"],
+    tags: ["校园", "考试", "解谜", "治愈", "简单", "3 分钟"],
     title: "午夜图书馆谜题",
     protagonist: "一名临考学生",
     visualStyle: "清爽校园、粉笔字、夜晚自习灯",
@@ -123,7 +123,7 @@ const packs: ThemePack[] = [
   },
   {
     key: "space_ship",
-    tags: ["互动剧情", "冒险", "轻度动作", "太空", "未来感", "困难", "5 分钟"],
+    tags: ["太空", "飞船", "科幻", "未来感", "困难", "5 分钟"],
     title: "星舰能量核心",
     protagonist: "一名临时舰长",
     visualStyle: "冷白舱灯、星云、全息仪表",
@@ -137,7 +137,7 @@ const packs: ThemePack[] = [
 
 const fallbackPack: ThemePack = {
   key: "mystery",
-  tags: ["互动剧情", "冒险", "悬疑", "中等", "3 分钟"],
+  tags: ["悬疑", "中等", "3 分钟"],
   title: "回声之门",
   protagonist: "一名意外闯入者",
   visualStyle: "清晰舞台感、柔和光影、神秘符号",
@@ -177,11 +177,12 @@ function pickPack(prompt: string) {
 }
 
 function typeTags(type: GameType) {
-  if (type === "quiz" || type === "memory") return ["解谜"];
-  if (type === "clicker") return ["轻度动作", "简单", "1 分钟"];
-  if (type === "dodge") return ["轻度动作", "生存", "困难"];
-  if (type === "escape_room") return ["逃脱", "解谜"];
-  return ["互动剧情"];
+  if (type === "quiz") return ["问答", "解谜"];
+  if (type === "clicker") return ["点击", "收集", "轻度动作", "简单", "1 分钟"];
+  if (type === "memory") return ["记忆", "配对", "解谜"];
+  if (type === "dodge") return ["动作", "躲避", "生存", "困难"];
+  if (type === "escape_room") return ["密室逃脱", "逃脱", "解谜"];
+  return ["互动剧情", "分支选择"];
 }
 
 export function generateConstrainedGameSpec(prompt: string): GameSpec {
@@ -281,13 +282,13 @@ function makeQuiz(pack: ThemePack): NonNullable<GameSpec["quiz"]> {
 }
 
 function makeClicker(pack: ThemePack): NonNullable<GameSpec["clicker"]> {
-  return { targetScore: 30, timeLimitSeconds: 20, itemLabel: pack.items[0], bonusLabel: pack.items[1] };
+  return { targetScore: 45, timeLimitSeconds: 30, itemLabel: pack.items[0], bonusLabel: pack.items[1] };
 }
 
 function makeMemory(pack: ThemePack): NonNullable<GameSpec["memory"]> {
   return {
-    maxMoves: 12,
-    cards: pack.items.flatMap((item, index) => [
+    maxMoves: 18,
+    cards: [...pack.items, pack.scenes[0]].flatMap((item, index) => [
       { id: `${index}a`, label: item },
       { id: `${index}b`, label: item },
     ]),
@@ -295,7 +296,7 @@ function makeMemory(pack: ThemePack): NonNullable<GameSpec["memory"]> {
 }
 
 function makeDodge(pack: ThemePack): NonNullable<GameSpec["dodge"]> {
-  return { playerLabel: pack.protagonist, obstacleLabel: pack.items[1], surviveSeconds: 18, speed: pack.key === "space_ship" ? 1.35 : 1 };
+  return { playerLabel: pack.protagonist, obstacleLabel: pack.items[1], surviveSeconds: 30, speed: pack.key === "space_ship" ? 1.15 : 1 };
 }
 
 function makeEscapeRoom(pack: ThemePack): NonNullable<GameSpec["escapeRoom"]> {
@@ -405,33 +406,56 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
       draw();
     }
     function renderClicker() {
-      const cfg = spec.clicker; let score = 0, left = cfg.timeLimitSeconds;
-      root.innerHTML = '<div class="panel">时间 <strong id="time"></strong> 秒　分数 <strong id="score">0</strong> / ' + cfg.targetScore + '</div><button id="tap" style="font-size:28px;min-height:180px;text-align:center">点击收集：' + cfg.itemLabel + '</button><p class="meta">偶尔会触发奖励：' + cfg.bonusLabel + '</p>';
-      const timer = setInterval(() => { left--; document.getElementById("time").textContent = left; if (left <= 0) { clearInterval(timer); end(score >= cfg.targetScore ? '收集成功！' : '时间到，分数不足。'); } }, 1000);
-      document.getElementById("time").textContent = left;
-      document.getElementById("tap").addEventListener("click", () => { score += Math.random() > 0.82 ? 5 : 1; document.getElementById("score").textContent = score; if (score >= cfg.targetScore) { clearInterval(timer); end('收集成功！'); } });
+      const cfg = spec.clicker; let score = 0, left = cfg.timeLimitSeconds, combo = 1;
+      root.innerHTML = '<div class="panel row"><span>倒计时 <strong id="time">' + left + '</strong> 秒</span><span>分数 <strong id="score">0</strong> / ' + cfg.targetScore + '</span><span>连击 x<strong id="combo">1</strong></span></div><div class="card-grid"><button id="tap" class="card" style="min-height:170px;font-size:24px">收集 ' + cfg.itemLabel + '</button><button id="decoy" class="card" style="min-height:170px">干扰物：不要点</button></div><p id="feedback" class="meta">连续点击目标物会提高连击，点到干扰物会扣分。</p>';
+      const timer = setInterval(() => { left--; document.getElementById("time").textContent = left; if (left <= 0) { clearInterval(timer); end(score >= cfg.targetScore ? '目标达成，收集成功！' : '时间到，分数不足。'); } }, 1000);
+      function sync(msg) { document.getElementById("score").textContent = score; document.getElementById("combo").textContent = combo; document.getElementById("feedback").textContent = msg; }
+      document.getElementById("tap").addEventListener("click", () => { score += combo; combo = Math.min(5, combo + 1); sync('收集到 ' + cfg.itemLabel + '，连击提升。'); if (score >= cfg.targetScore) { clearInterval(timer); end('目标达成，收集成功！'); } });
+      document.getElementById("decoy").addEventListener("click", () => { score = Math.max(0, score - 3); combo = 1; sync('点到了干扰物，扣 3 分并重置连击。'); });
     }
     function renderMemory() {
-      const cfg = spec.memory; let first = null, matched = new Set(), moves = 0;
+      const cfg = spec.memory; let first = null, lock = false, matched = new Set(), moves = 0;
       const cards = [...cfg.cards].sort(() => Math.random() - 0.5);
-      function draw() {
-        root.innerHTML = '<div class="panel">步数 ' + moves + ' / ' + cfg.maxMoves + '</div><div class="card-grid">' + cards.map((card, i) => '<button class="card ' + (matched.has(card.label) ? 'done' : '') + '" data-card="' + i + '">' + (matched.has(card.label) ? card.label : '？') + '</button>').join('') + '</div>';
+      function draw(open = new Set()) {
+        root.innerHTML = '<div class="panel">步数 ' + moves + ' / ' + cfg.maxMoves + '　已配对 ' + matched.size + ' / ' + (cards.length / 2) + '</div><div class="card-grid">' + cards.map((card, i) => '<button class="card ' + (matched.has(card.label) ? 'done' : '') + '" data-card="' + i + '">' + (matched.has(card.label) || open.has(i) ? card.label : '？') + '</button>').join('') + '</div>';
         document.querySelectorAll("[data-card]").forEach((button) => button.addEventListener("click", () => pick(Number(button.dataset.card))));
       }
-      function pick(i) { const card = cards[i]; if (matched.has(card.label)) return; if (!first) { first = i; event.target.textContent = card.label; return; } moves++; if (cards[first].label === card.label) matched.add(card.label); first = null; if (matched.size === spec.items.length) return end('全部配对成功！'); if (moves >= cfg.maxMoves) return end('步数用完，再来一次。'); draw(); }
+      function pick(i) {
+        if (lock || matched.has(cards[i].label) || first === i) return;
+        if (first === null) { first = i; draw(new Set([i])); return; }
+        moves++; const second = i; const open = new Set([first, second]); draw(open);
+        if (cards[first].label === cards[second].label) { matched.add(cards[i].label); first = null; if (matched.size === cards.length / 2) return window.setTimeout(() => end('全部配对成功！'), 350); return window.setTimeout(() => draw(), 350); }
+        lock = true; window.setTimeout(() => { first = null; lock = false; if (moves >= cfg.maxMoves) return end('步数用完，再来一次。'); draw(); }, 700);
+      }
       draw();
     }
     function renderDodge() {
-      const cfg = spec.dodge; root.innerHTML = '<div class="panel">躲避 ' + cfg.obstacleLabel + '，坚持 ' + cfg.surviveSeconds + ' 秒。使用 ← → 或 A/D 移动。</div><canvas id="canvas" width="760" height="420"></canvas>';
-      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d"); let x = 360, keys = {}, t = 0, obstacles = [];
+      const cfg = spec.dodge;
+      root.innerHTML = '<div class="panel"><h2>躲避挑战</h2><p class="meta">操控蓝色角色块，躲开从上方落下的 ' + cfg.obstacleLabel + '，坚持 ' + cfg.surviveSeconds + ' 秒获胜。</p><button id="start">开始游戏</button></div><canvas id="canvas" width="760" height="360"></canvas>';
+      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d"); let x = 360, keys = {}, t = 0, running = false, obstacles = [], lastSpawn = 0;
       addEventListener("keydown", e => keys[e.key] = true); addEventListener("keyup", e => keys[e.key] = false);
-      function loop() { t += 1/60; if (keys.ArrowLeft || keys.a) x -= 5; if (keys.ArrowRight || keys.d) x += 5; x = Math.max(20, Math.min(720, x)); if (Math.random() < 0.035 * cfg.speed) obstacles.push({x: Math.random()*720+20, y: -20, s: 3 + Math.random()*3}); ctx.clearRect(0,0,760,420); ctx.fillStyle="#60a5fa"; ctx.fillRect(x,370,36,36); ctx.fillStyle="#f97316"; obstacles.forEach(o => { o.y += o.s * cfg.speed; ctx.fillRect(o.x,o.y,28,28); if (Math.abs(o.x-x)<32 && Math.abs(o.y-370)<32) return end('被障碍击中，挑战失败。'); }); obstacles = obstacles.filter(o => o.y < 440); ctx.fillStyle="#fff"; ctx.fillText('时间 ' + Math.floor(t) + ' / ' + cfg.surviveSeconds, 20, 28); if (t >= cfg.surviveSeconds) return end('躲避成功！'); requestAnimationFrame(loop); } loop();
+      document.getElementById("start").addEventListener("click", () => { running = true; t = 0; obstacles = []; lastSpawn = 0; loop(); });
+      function loop() {
+        if (!running) return; t += 1/60; const difficulty = 1 + t / cfg.surviveSeconds;
+        if (keys.ArrowLeft || keys.a) x -= 5.6; if (keys.ArrowRight || keys.d) x += 5.6; x = Math.max(18, Math.min(706, x));
+        if (t - lastSpawn > Math.max(0.38, 1.1 - difficulty * 0.22)) { lastSpawn = t; obstacles.push({x: Math.random()*700+20, y: -24, s: (2.1 + Math.random()*1.4) * difficulty * cfg.speed}); }
+        ctx.clearRect(0,0,760,360); ctx.fillStyle="#0f172a"; ctx.fillRect(0,0,760,360);
+        ctx.fillStyle="#60a5fa"; ctx.fillRect(x,310,36,36);
+        ctx.fillStyle="#fb923c"; let hit = false; obstacles.forEach(o => { o.y += o.s; ctx.fillRect(o.x,o.y,26,26); if (Math.abs(o.x-x)<30 && Math.abs(o.y-310)<30) hit = true; });
+        if (hit) { running = false; return end('被障碍击中，挑战失败。'); }
+        obstacles = obstacles.filter(o => o.y < 380); ctx.fillStyle="#fff"; ctx.font="16px sans-serif"; ctx.fillText('存活 ' + Math.floor(t) + ' / ' + cfg.surviveSeconds + ' 秒', 18, 28);
+        if (t >= cfg.surviveSeconds) { running = false; return end('存活成功，完成挑战！'); }
+        requestAnimationFrame(loop);
+      }
     }
     function renderEscapeRoom() {
       const room = spec.escapeRoom; let found = new Set();
-      root.innerHTML = '<h2>' + room.roomName + '</h2><p class="meta">收集线索并输入答案。</p><div class="grid">' + room.clues.map(clue => '<button data-clue="' + clue.id + '">' + clue.label + '</button>').join('') + '</div><div class="panel"><input id="answer" placeholder="输入答案" /><button id="submit">提交答案</button></div><p id="hint" class="meta"></p>';
-      document.querySelectorAll("[data-clue]").forEach(button => button.addEventListener("click", () => { const clue = room.clues.find(c => c.id === button.dataset.clue); found.add(clue.id); document.getElementById("hint").textContent = clue.text + ' 已收集线索 ' + found.size + '/' + room.clues.length; }));
-      document.getElementById("submit").addEventListener("click", () => { const answer = document.getElementById("answer").value.trim(); const puzzle = room.puzzles[0]; if (answer === puzzle.answer) end(puzzle.reward); else document.getElementById("hint").textContent = '答案还不对，继续找线索。'; });
+      function draw(message = '点击房间中的线索，收集足够信息后输入答案。') {
+        root.innerHTML = '<h2>' + room.roomName + '</h2><p class="meta">' + message + '</p><div class="card-grid">' + room.clues.map(clue => '<button class="card ' + (found.has(clue.id) ? 'done' : '') + '" data-clue="' + clue.id + '">' + clue.label + '</button>').join('') + '</div><div class="panel"><strong>已发现线索：</strong><span id="inventory">' + (found.size ? room.clues.filter(c => found.has(c.id)).map(c => c.label).join('、') : '暂无') + '</span></div><div class="panel"><input id="answer" placeholder="输入关键物品名称" /><button id="submit">解锁出口</button></div>';
+        document.querySelectorAll("[data-clue]").forEach(button => button.addEventListener("click", () => { const clue = room.clues.find(c => c.id === button.dataset.clue); found.add(clue.id); draw(clue.text + ' 已收集线索 ' + found.size + '/' + room.clues.length); }));
+        document.getElementById("submit").addEventListener("click", () => { const answer = document.getElementById("answer").value.trim(); const puzzle = room.puzzles[0]; if (found.size < 3) return draw('线索还不够，至少需要找到 3 个线索。'); if (answer === puzzle.answer) end(puzzle.reward); else draw('答案还不对，检查物品栏中的关键线索。'); });
+      }
+      draw();
     }
     render();
   </script>

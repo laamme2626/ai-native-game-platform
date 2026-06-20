@@ -1,11 +1,11 @@
 export const tagTaxonomy = [
   {
     group: "类型",
-    tags: ["互动剧情", "解谜", "冒险", "逃脱", "生存", "轻度动作"],
+    tags: ["互动剧情", "分支选择", "问答", "解谜", "点击", "收集", "记忆", "配对", "动作", "躲避", "密室逃脱", "冒险", "生存", "轻度动作"],
   },
   {
     group: "题材",
-    tags: ["魔法", "赛博", "校园", "太空", "海盗", "童话", "悬疑"],
+    tags: ["魔法", "森林", "奇幻", "赛博", "城市", "校园", "考试", "太空", "飞船", "科幻", "海盗", "宝藏", "童话", "悬疑"],
   },
   {
     group: "风格",
@@ -27,4 +27,8 @@ export function normalizeTags(tags: string[]) {
   return Array.from(
     new Set(tags.filter((tag) => allTaxonomyTags.includes(tag))),
   );
+}
+
+export function displayTags(tags: string, limit = 6) {
+  return tags.split(",").filter(Boolean).slice(0, limit);
 }

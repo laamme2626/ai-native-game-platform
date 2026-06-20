@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { buttonClass } from "@/components/ui";
 
 export default function GameOwnerActions({
   gameId,
@@ -35,6 +36,7 @@ export default function GameOwnerActions({
 
   async function remix() {
     setIsBusy(true);
+    setMessage("");
     const response = await fetch(`/api/games/${gameId}/remix`, { method: "POST" });
     const payload = await response.json().catch(() => null);
     setIsBusy(false);
@@ -71,7 +73,7 @@ export default function GameOwnerActions({
           <button
             disabled={isBusy}
             onClick={() => mutate(`/api/games/${gameId}/publish`, "发布成功")}
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-600"
+            className={`${buttonClass("primary")} disabled:bg-slate-300 disabled:text-slate-600`}
           >
             发布
           </button>
@@ -79,16 +81,13 @@ export default function GameOwnerActions({
           <button
             disabled={isBusy}
             onClick={() => mutate(`/api/games/${gameId}/unpublish`, "已取消发布")}
-            className="rounded-md bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:bg-slate-300 disabled:text-slate-600"
+            className={`${buttonClass("danger")} disabled:bg-slate-300 disabled:text-slate-600`}
           >
             取消发布
           </button>
         )}
         {sourceJobId ? (
-          <a
-            href={`/jobs/${sourceJobId}`}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
-          >
+          <a href={`/jobs/${sourceJobId}`} className={buttonClass("secondary")}>
             查看生成任务
           </a>
         ) : null}
@@ -96,7 +95,7 @@ export default function GameOwnerActions({
           <button
             disabled={isBusy}
             onClick={remix}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-500"
+            className={`${buttonClass("secondary")} disabled:bg-slate-100 disabled:text-slate-500`}
           >
             Remix 派生
           </button>
@@ -104,7 +103,7 @@ export default function GameOwnerActions({
         <button
           disabled={isBusy}
           onClick={deleteGame}
-          className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-600"
+          className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-600"
         >
           删除
         </button>

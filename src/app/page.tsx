@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import GameMetricButtons from "@/components/game-metric-buttons";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { tagTaxonomy } from "@/lib/tags";
+import { ButtonLink, EmptyState, PageHeader, PageShell } from "@/components/ui";
+import { GameCard } from "@/components/game-card";
 
 export default async function Home({
   searchParams,
@@ -37,7 +38,10 @@ export default async function Home({
     ? new Set(
         (
           await prisma.favorite.findMany({
-            where: { userId: user.id, gameId: { in: games.map((game) => game.id) } },
+            where: {
+              userId: user.id,
+              gameId: { in: games.map((game) => game.id) },
+            },
             select: { gameId: true },
           })
         ).map((favorite) => favorite.gameId),
@@ -45,138 +49,79 @@ export default async function Home({
     : new Set<string>();
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-10">
-      <section className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            AI Native 互动游戏
-          </h1>
-          <p className="mt-3 max-w-2xl text-slate-600">
-            首页只展示已发布游戏。点击卡片查看详情，也可以直接开始游玩。
-          </p>
+    <PageShell>
+      <PageHeader
+        eyebrow="AI Game Arcade"
+        title="AI Native 互动游戏创作社区"
+        description="从自然语言生成轻量小游戏，浏览已发布作品，筛选题材和玩法，直接在浏览器里运行。"
+        action={<ButtonLink href="/create">创建游戏</ButtonLink>}
+      />
+
+      <section className="mb-6 grid gap-4 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-sm backdrop-blur lg:grid-cols-[1.1fr_2fr]">
+        <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="搜索标题、简介、题材..."
+            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none ring-blue-200 transition focus:border-blue-500 focus:ring-4"
+          />
+          <button className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+            搜索
+          </button>
+        </form>
+        <div className="grid gap-3">
+          <Link
+            href={q ? `/?q=${encodeURIComponent(q)}` : "/"}
+            className={`w-fit rounded-full border px-3 py-1 text-sm ${
+              tag ? "border-slate-300 bg-white" : "border-blue-600 bg-blue-50 text-blue-700"
+            }`}
+          >
+            全部游戏
+          </Link>
+          {tagTaxonomy.map((group) => (
+            <div key={group.group} className="grid gap-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {group.group}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {group.tags.map((item) => (
+                  <Link
+                    key={item}
+                    href={`/?${new URLSearchParams({ ...(q ? { q } : {}), tag: item })}`}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      tag === item
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-blue-300"
+                    }`}
+                  >
+                    {item}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-        <Link
-          href="/create"
-          className="w-fit rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          创建游戏
-        </Link>
       </section>
 
-      <form className="mb-5 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-[1fr_auto]">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="按标题 / 简介搜索"
-          className="rounded-md border border-slate-300 px-3 py-2"
-        />
-        <button className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-          搜索
-        </button>
-      </form>
-
-      <div className="mb-8 grid gap-4 rounded-lg border border-slate-200 bg-white p-4">
-        <Link
-          href={q ? `/?q=${encodeURIComponent(q)}` : "/"}
-          className={`rounded-full border px-3 py-1 text-sm ${
-            tag ? "border-slate-300 bg-white" : "border-blue-600 bg-blue-50 text-blue-700"
-          }`}
-        >
-          全部标签
-        </Link>
-        {tagTaxonomy.map((group) => (
-          <section key={group.group}>
-            <h2 className="mb-2 text-sm font-semibold text-slate-700">
-              {group.group}
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {group.tags.map((item) => (
-                <Link
-                  key={item}
-                  href={`/?${new URLSearchParams({ ...(q ? { q } : {}), tag: item })}`}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    tag === item
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-slate-300 bg-white"
-                  }`}
-                >
-                  {item}
-                </Link>
-              ))}
-            </div>
-          </section>
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        {games.map((game) => (
+          <GameCard
+            key={game.id}
+            game={game}
+            isFavorite={favoriteIds.has(game.id)}
+          />
         ))}
-      </div>
-
-      <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {games.map((game) => {
-          const gameTags = game.tags.split(",").filter(Boolean);
-          return (
-            <article
-              key={game.id}
-              className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
-            >
-              <Link href={`/games/${game.id}`} className="block">
-                <div className="h-32 bg-gradient-to-br from-blue-100 via-emerald-100 to-amber-100" />
-                <div className="p-5">
-                  <h2 className="text-xl font-semibold">{game.title}</h2>
-                  <p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">
-                    {game.description}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {gameTags.map((item) => (
-                      <span
-                        key={item}
-                        className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-4 text-xs text-slate-500">
-                    作者：{game.owner.email}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    发布时间：
-                    {game.publishedAt
-                      ? new Date(game.publishedAt).toLocaleString("zh-CN")
-                      : "未发布"}
-                  </p>
-                </div>
-              </Link>
-              <div className="border-t border-slate-100 p-5 pt-4">
-                <GameMetricButtons
-                  gameId={game.id}
-                  playCount={game.playCount}
-                  likeCount={game.likeCount}
-                  favoriteCount={game.favoriteCount}
-                  isFavorite={favoriteIds.has(game.id)}
-                />
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    href={`/play/${game.id}`}
-                    className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    开始游玩
-                  </Link>
-                  <Link
-                    href={`/games/${game.id}`}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
-                  >
-                    查看详情
-                  </Link>
-                </div>
-              </div>
-            </article>
-          );
-        })}
       </section>
 
       {!games.length ? (
-        <p className="rounded-lg border border-slate-200 bg-white p-6 text-slate-600">
-          暂无匹配游戏。换个关键词试试。
-        </p>
+        <div className="mt-6">
+          <EmptyState
+            title="没有匹配的游戏"
+            description="换一个关键词或标签试试，也可以创建一个新的游戏填补这个空位。"
+            action={<ButtonLink href="/create">创建游戏</ButtonLink>}
+          />
+        </div>
       ) : null}
-    </main>
+    </PageShell>
   );
 }

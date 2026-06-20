@@ -16,11 +16,11 @@ export default async function RootLayout({
   const user = await getCurrentUser();
 
   return (
-    <html lang="en">
-      <body>
-        <header className="border-b border-slate-200 bg-white">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <header className="sticky top-0 z-40 border-b border-white/70 bg-white/85 backdrop-blur">
           <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-            <Link href="/" className="text-lg font-semibold">
+            <Link href="/" className="text-lg font-semibold text-slate-950">
               Yahaha
             </Link>
             <div className="flex items-center gap-3 text-sm">

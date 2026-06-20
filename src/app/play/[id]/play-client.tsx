@@ -141,21 +141,50 @@ export default function PlayClient({
         </section>
       ) : null}
 
-      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-        <div className="grid gap-2 sm:grid-cols-4">
-          {stageItems.map(([key, label]) => (
-            <div
-              key={key}
-              className={`rounded-md border px-3 py-2 text-sm ${
-                stage === key
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-slate-50 text-slate-500"
-              }`}
-            >
-              {label}
-            </div>
-          ))}
+      <section className={`mb-4 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-sm transition ${stage === "running" ? "opacity-80" : ""}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-950">游戏启动流程</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              {stage === "running" ? "游戏运行中，启动面板已收起为状态概览。" : "按步骤加载 manifest 和运行环境。"}
+            </p>
+          </div>
+          {stage === "running" ? (
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              运行中
+            </span>
+          ) : null}
         </div>
+        <ol className={`mt-4 grid gap-3 ${stage === "running" ? "sm:grid-cols-4" : ""}`}>
+          {stageItems.map(([key, label], index) => {
+            const state = stepState(stage, key as LoadStage);
+            return (
+              <li key={key} className="flex items-center gap-3">
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                    state === "done"
+                      ? "bg-emerald-600 text-white"
+                      : state === "active"
+                        ? "bg-blue-600 text-white"
+                        : state === "error"
+                          ? "bg-red-600 text-white"
+                          : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {state === "done" ? "✓" : state === "error" ? "!" : state === "active" ? "…" : index + 1}
+                </span>
+                <div>
+                  <p className={`text-sm font-medium ${state === "pending" ? "text-slate-400" : "text-slate-950"}`}>
+                    {label}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {state === "active" ? "正在进行..." : state === "done" ? "已完成" : state === "error" ? "发生错误" : "未开始"}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </section>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -234,4 +263,17 @@ function LoadingPanel({ text }: { text: string }) {
       </div>
     </div>
   );
+}
+
+function stepState(current: LoadStage, key: LoadStage) {
+  const order: LoadStage[] = ["reading-meta", "loading-manifest", "starting-runtime", "running"];
+  if (current === "failed") {
+    return key === "loading-manifest" || key === "starting-runtime" ? "error" : "pending";
+  }
+  if (current === "ended") return key === "running" ? "done" : "done";
+  const currentIndex = order.indexOf(current);
+  const keyIndex = order.indexOf(key);
+  if (keyIndex < currentIndex) return "done";
+  if (keyIndex === currentIndex) return current === "running" ? "done" : "active";
+  return "pending";
 }

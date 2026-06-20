@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #eef4ff;
   --foreground: #111827;
 }
 
@@ -20,4 +20,16 @@ body {
 
 a {
   color: inherit;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(37, 99, 235, 0.18), transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(16, 185, 129, 0.16), transparent 24%),
+    linear-gradient(180deg, #eef4ff 0%, #f8fafc 42%, #eef2ff 100%);
 }
