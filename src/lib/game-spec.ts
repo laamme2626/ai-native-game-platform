@@ -1,12 +1,13 @@
 import { normalizeTags } from "@/lib/tags";
+import {
+  assertSupportedPrompt,
+  GameType,
+  hasRuntimeTemplate,
+  isSupportedGameType,
+  supportedGameTypeValues,
+} from "@/lib/game-type-registry";
 
-export type GameType =
-  | "choice_adventure"
-  | "quiz"
-  | "clicker"
-  | "memory"
-  | "dodge"
-  | "escape_room";
+export type { GameType } from "@/lib/game-type-registry";
 
 export type GameSpec = {
   schemaVersion: 1;
@@ -17,6 +18,7 @@ export type GameSpec = {
   protagonist: string;
   visualStyle: string;
   playerGoal: string;
+  adaptationNotes?: string;
   tags: string[];
   items: string[];
   stats: { name: string; min: number; max: number; initial: number }[];
@@ -56,6 +58,26 @@ export type GameSpec = {
     roomName: string;
     clues: { id: string; label: string; text: string }[];
     puzzles: { question: string; answer: string; reward: string }[];
+  };
+  sideBattle?: {
+    playerLabel: string;
+    enemyLabel: string;
+    playerHp: number;
+    enemyHp: number;
+    attackLabel: string;
+    defendLabel: string;
+  };
+  runner?: {
+    playerLabel: string;
+    obstacleLabel: string;
+    goalDistance: number;
+    speed: number;
+  };
+  platformer?: {
+    playerLabel: string;
+    goalLabel: string;
+    platformLabel: string;
+    goalHeight: number;
   };
 };
 
@@ -157,13 +179,7 @@ export function checkPromptSafety(prompt: string) {
 }
 
 export function detectGameType(prompt: string): GameType {
-  const text = prompt.toLowerCase();
-  if (/问答|测验|答题|quiz|trivia/.test(text)) return "quiz";
-  if (/点击|收集|分数|click|score|tap/.test(text)) return "clicker";
-  if (/记忆|翻牌|配对|memory|match/.test(text)) return "memory";
-  if (/躲避|飞船|障碍|生存|dodge|avoid|survive/.test(text)) return "dodge";
-  if (/密室|逃脱|谜题|找线索|escape room|clue/.test(text)) return "escape_room";
-  return "choice_adventure";
+  return assertSupportedPrompt(prompt).type;
 }
 
 function pickPack(prompt: string) {
@@ -182,6 +198,9 @@ function typeTags(type: GameType) {
   if (type === "memory") return ["记忆", "配对", "解谜", "简单", "3 分钟"];
   if (type === "dodge") return ["动作", "躲避", "生存", "困难", "1 分钟"];
   if (type === "escape_room") return ["密室逃脱", "逃脱", "解谜", "中等", "5 分钟"];
+  if (type === "side_battle") return ["动作", "轻度动作", "冒险", "中等", "3 分钟"];
+  if (type === "runner") return ["动作", "轻度动作", "躲避", "简单", "1 分钟"];
+  if (type === "platformer") return ["动作", "轻度动作", "冒险", "中等", "3 分钟"];
   return ["互动剧情", "分支选择", "冒险", "3 分钟"];
 }
 
@@ -189,8 +208,9 @@ export function generateConstrainedGameSpec(prompt: string): GameSpec {
   const idea = prompt.trim().replace(/\s+/g, " ").slice(0, 500);
   checkPromptSafety(idea);
   const pack = pickPack(idea);
-  const type = detectGameType(idea);
-  const base = baseSpec(type, pack);
+  const detection = assertSupportedPrompt(idea);
+  const type = detection.type;
+  const base = baseSpec(type, pack, detection.adaptationNotes);
   return {
     ...base,
     tags: normalizeTags([...pack.tags, ...typeTags(type)]),
@@ -199,10 +219,13 @@ export function generateConstrainedGameSpec(prompt: string): GameSpec {
     memory: type === "memory" ? makeMemory(pack) : undefined,
     dodge: type === "dodge" ? makeDodge(pack) : undefined,
     escapeRoom: type === "escape_room" ? makeEscapeRoom(pack) : undefined,
+    sideBattle: type === "side_battle" ? makeSideBattle(pack) : undefined,
+    runner: type === "runner" ? makeRunner(pack) : undefined,
+    platformer: type === "platformer" ? makePlatformer(pack) : undefined,
   };
 }
 
-function baseSpec(type: GameType, pack: ThemePack): GameSpec {
+function baseSpec(type: GameType, pack: ThemePack, adaptationNotes?: string): GameSpec {
   return {
     schemaVersion: 1,
     type,
@@ -212,6 +235,7 @@ function baseSpec(type: GameType, pack: ThemePack): GameSpec {
     protagonist: pack.protagonist,
     visualStyle: pack.visualStyle,
     playerGoal: pack.goal,
+    adaptationNotes,
     tags: normalizeTags(pack.tags),
     items: pack.items,
     stats: [
@@ -232,6 +256,9 @@ function typeTitle(type: GameType) {
     memory: "记忆翻牌",
     dodge: "躲避生存",
     escape_room: "密室谜题",
+    side_battle: "横屏对战",
+    runner: "跑酷挑战",
+    platformer: "平台跳跃",
   };
   return names[type];
 }
@@ -245,6 +272,9 @@ function typeDescription(type: GameType, pack: ThemePack) {
     memory: `翻开主题卡牌寻找${pack.items[0]}、${pack.items[1]}与${pack.items[2]}的配对线索，在步数耗尽前完成记忆挑战。`,
     dodge: `操控${pack.protagonist}穿过动态障碍，坚持到倒计时结束并守住「${pack.goal}」的最后机会。`,
     escape_room: `调查${pack.scenes[2]}里的多个线索，整理道具关系后输入关键答案解锁出口。`,
+    side_battle: `在横屏战斗场地里操控${pack.protagonist}移动、攻击和防御，击败守住${pack.scenes[2]}的对手。`,
+    runner: `操控${pack.protagonist}一路奔跑，跳过或避开${pack.items[1]}，到达终点完成「${pack.goal}」。`,
+    platformer: `操控${pack.protagonist}在平台之间跳跃，收集${pack.items[0]}并抵达${pack.scenes[2]}。`,
   };
   return descriptions[type];
 }
@@ -349,11 +379,40 @@ function makeEscapeRoom(pack: ThemePack): NonNullable<GameSpec["escapeRoom"]> {
   };
 }
 
-export function validateGameSpec(spec: GameSpec) {
+function makeSideBattle(pack: ThemePack): NonNullable<GameSpec["sideBattle"]> {
+  return {
+    playerLabel: pack.protagonist,
+    enemyLabel: pack.key === "cat_forest" ? "史莱姆守卫" : `${pack.items[1]}守卫`,
+    playerHp: 100,
+    enemyHp: 120,
+    attackLabel: `挥动${pack.items[0]}攻击`,
+    defendLabel: `用${pack.items[1]}防御`,
+  };
+}
+
+function makeRunner(pack: ThemePack): NonNullable<GameSpec["runner"]> {
+  return {
+    playerLabel: pack.protagonist,
+    obstacleLabel: pack.items[1],
+    goalDistance: 360,
+    speed: pack.key === "cyber_city" ? 1.15 : 1,
+  };
+}
+
+function makePlatformer(pack: ThemePack): NonNullable<GameSpec["platformer"]> {
+  return {
+    playerLabel: pack.protagonist,
+    goalLabel: pack.items[0],
+    platformLabel: pack.scenes[1],
+    goalHeight: 4,
+  };
+}
+
+export function validateGameSpec(spec: GameSpec, sourcePrompt = "") {
   if (spec.schemaVersion !== 1) throw new Error("不支持的 game_spec 版本");
   if (!spec.title || !spec.description || !spec.type) throw new Error("game_spec 缺少必要元数据");
-  const validTypes: GameType[] = ["choice_adventure", "quiz", "clicker", "memory", "dodge", "escape_room"];
-  if (!validTypes.includes(spec.type)) throw new Error(`不支持的游戏类型 ${spec.type}`);
+  if (!isSupportedGameType(spec.type)) throw new Error(`不支持的游戏类型 ${spec.type}`);
+  if (!hasRuntimeTemplate(spec.type)) throw new Error(`缺少 runtime template：${spec.type}`);
   if (!spec.playerGoal) throw new Error("game_spec 缺少可玩目标");
 
   if (spec.type === "choice_adventure") validateChoice(spec);
@@ -362,6 +421,29 @@ export function validateGameSpec(spec: GameSpec) {
   if (spec.type === "memory" && (!spec.memory || spec.memory.cards.length < 4)) throw new Error("memory 至少需要 4 张卡");
   if (spec.type === "dodge" && (!spec.dodge || spec.dodge.surviveSeconds <= 0)) throw new Error("dodge 缺少生存时间");
   if (spec.type === "escape_room" && (!spec.escapeRoom || spec.escapeRoom.puzzles.length < 1)) throw new Error("escape_room 至少需要 1 个谜题");
+  if (spec.type === "side_battle" && (!spec.sideBattle || spec.sideBattle.enemyHp <= 0)) throw new Error("side_battle 缺少对战 HP 配置");
+  if (spec.type === "runner" && (!spec.runner || spec.runner.goalDistance <= 0)) throw new Error("runner 缺少跑酷距离");
+  if (spec.type === "platformer" && (!spec.platformer || spec.platformer.goalHeight <= 0)) throw new Error("platformer 缺少平台目标");
+  validateTypeRuntimeMatch(spec, sourcePrompt);
+}
+
+export function supportedGameTypePromptText() {
+  return supportedGameTypeValues.join("、");
+}
+
+function validateTypeRuntimeMatch(spec: GameSpec, sourcePrompt: string) {
+  const content = `${sourcePrompt} ${spec.title} ${spec.description} ${spec.playerGoal}`;
+  if (spec.type === "dodge" && /(横屏|横版|2d|2D).*(对战|战斗|攻击|防御)|对战|battle|fighter|hp|血量/.test(content)) {
+    throw new Error("QA Validator：dodge 类型不能承载横屏对战内容");
+  }
+  if (spec.type === "dodge" && /(赛车|车辆|race|racing)/i.test(content) && !spec.adaptationNotes) {
+    throw new Error("QA Validator：赛车需求降级为 dodge 时必须写 adaptationNotes");
+  }
+  if (spec.type === "clicker" && /(音游|节奏谱面|rhythm)/i.test(content)) {
+    throw new Error("QA Validator：clicker 类型不能承载音游谱面内容");
+  }
+  if (!JSON.stringify(spec).includes("undefined")) return;
+  throw new Error("QA Validator：game_spec 不允许出现 undefined");
 }
 
 function validateChoice(spec: GameSpec) {
@@ -426,6 +508,9 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
       if (spec.type === "memory") return renderMemory();
       if (spec.type === "dodge") return renderDodge();
       if (spec.type === "escape_room") return renderEscapeRoom();
+      if (spec.type === "side_battle") return renderSideBattle();
+      if (spec.type === "runner") return renderRunner();
+      if (spec.type === "platformer") return renderPlatformer();
       return renderChoice();
     }
     function end(message) { root.innerHTML = '<div class="panel"><h2>游戏结束</h2><p class="meta">' + message + '</p><button onclick="restart()">重新开始</button></div>'; }
@@ -533,6 +618,81 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
         document.getElementById("submit").addEventListener("click", () => { const answer = document.getElementById("answer").value.trim(); const puzzle = room.puzzles[0]; if (found.size < 3) return draw('线索还不够，至少需要找到 3 个线索。'); if (answer === puzzle.answer) end(puzzle.reward); else draw('答案还不对，检查物品栏中的关键线索。'); });
       }
       draw();
+    }
+    function renderSideBattle() {
+      const cfg = spec.sideBattle;
+      root.innerHTML = '<div class="panel"><h2>横屏对战</h2><p class="meta">A/D 移动，J 攻击，K 防御。击败 ' + cfg.enemyLabel + ' 获胜。</p><button id="start">开始对战</button></div><canvas id="canvas" width="760" height="360"></canvas>';
+      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d");
+      let playerX = 120, enemyX = 600, playerHp = cfg.playerHp, enemyHp = cfg.enemyHp, defending = false, running = false, keys = {}, cooldown = 0, enemyCooldown = 0;
+      addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+      addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; if (e.key.toLowerCase() === "k") defending = false; });
+      document.getElementById("start").addEventListener("click", () => { playerX = 120; enemyX = 600; playerHp = cfg.playerHp; enemyHp = cfg.enemyHp; running = true; cooldown = 0; enemyCooldown = 0; loop(); });
+      function bar(x, y, w, hp, max, color) { ctx.fillStyle="#e2e8f0"; ctx.fillRect(x,y,w,14); ctx.fillStyle=color; ctx.fillRect(x,y,Math.max(0,w*hp/max),14); ctx.strokeStyle="#334155"; ctx.strokeRect(x,y,w,14); }
+      function drawFighter(x, label, color, facing) { ctx.fillStyle=color; ctx.fillRect(x,240,48,70); ctx.fillStyle="#0f172a"; ctx.font="14px sans-serif"; ctx.fillText(label.slice(0,8), x - 14, 232); ctx.fillStyle="#facc15"; ctx.fillRect(facing > 0 ? x + 42 : x - 18, 264, 24, 8); }
+      function loop() {
+        if (!running) return;
+        cooldown = Math.max(0, cooldown - 1); enemyCooldown = Math.max(0, enemyCooldown - 1);
+        if (keys.a || keys.arrowleft) playerX -= 4.6; if (keys.d || keys.arrowright) playerX += 4.6; playerX = Math.max(20, Math.min(690, playerX));
+        enemyX += enemyX > playerX ? -1.9 : 1.9; enemyX = Math.max(20, Math.min(690, enemyX));
+        defending = !!keys.k;
+        const distance = Math.abs(enemyX - playerX);
+        if (keys.j && cooldown <= 0 && distance < 86) { enemyHp -= 14; cooldown = 28; }
+        if (enemyCooldown <= 0 && distance < 74) { playerHp -= defending ? 4 : 12; enemyCooldown = 42; }
+        ctx.clearRect(0,0,760,360); ctx.fillStyle="#dbeafe"; ctx.fillRect(0,0,760,360); ctx.fillStyle="#94a3b8"; ctx.fillRect(0,310,760,18);
+        bar(28,24,220,playerHp,cfg.playerHp,"#2563eb"); bar(512,24,220,enemyHp,cfg.enemyHp,"#dc2626");
+        ctx.fillStyle="#0f172a"; ctx.font="16px sans-serif"; ctx.fillText("玩家 HP",28,18); ctx.fillText("敌人 HP",512,18);
+        drawFighter(playerX,cfg.playerLabel,"#2563eb",1); drawFighter(enemyX,cfg.enemyLabel,"#dc2626",-1);
+        if (defending) { ctx.strokeStyle="#22c55e"; ctx.lineWidth=4; ctx.strokeRect(playerX-8,232,64,86); }
+        if (enemyHp <= 0) { running = false; return end('你击败了 ' + cfg.enemyLabel + '，横屏对战胜利！'); }
+        if (playerHp <= 0) { running = false; return end('HP 归零，对战失败。'); }
+        requestAnimationFrame(loop);
+      }
+    }
+    function renderRunner() {
+      const cfg = spec.runner;
+      root.innerHTML = '<div class="panel"><h2>跑酷挑战</h2><p class="meta">按空格跳跃，避开 ' + cfg.obstacleLabel + '，跑满 ' + cfg.goalDistance + ' 米。</p><button id="start">开始跑酷</button></div><canvas id="canvas" width="760" height="360"></canvas>';
+      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d");
+      let y = 280, vy = 0, distance = 0, running = false, obstacles = [], lastSpawn = 0, keys = {};
+      addEventListener("keydown", e => keys[e.key] = true); addEventListener("keyup", e => keys[e.key] = false);
+      document.getElementById("start").addEventListener("click", () => { y = 280; vy = 0; distance = 0; obstacles = []; lastSpawn = 0; running = true; loop(); });
+      function loop() {
+        if (!running) return;
+        distance += 1.4 * cfg.speed; lastSpawn += 1;
+        if ((keys[" "] || keys.ArrowUp) && y >= 280) vy = -10.5;
+        vy += 0.55; y = Math.min(280, y + vy);
+        if (lastSpawn > 70) { obstacles.push({x: 780, w: 26 + Math.random()*24}); lastSpawn = 0; }
+        ctx.clearRect(0,0,760,360); ctx.fillStyle="#eff6ff"; ctx.fillRect(0,0,760,360); ctx.fillStyle="#334155"; ctx.fillRect(0,318,760,18);
+        ctx.fillStyle="#2563eb"; ctx.fillRect(88,y,36,38);
+        ctx.fillStyle="#f97316"; let hit = false; obstacles.forEach(o => { o.x -= 5 * cfg.speed; ctx.fillRect(o.x,292,o.w,26); if (o.x < 124 && o.x + o.w > 88 && y + 38 > 292) hit = true; });
+        obstacles = obstacles.filter(o => o.x > -80);
+        ctx.fillStyle="#0f172a"; ctx.font="16px sans-serif"; ctx.fillText('距离 ' + Math.floor(distance) + ' / ' + cfg.goalDistance + ' 米', 18, 28);
+        if (hit) { running = false; return end('撞上障碍，跑酷失败。'); }
+        if (distance >= cfg.goalDistance) { running = false; return end('抵达终点，跑酷成功！'); }
+        requestAnimationFrame(loop);
+      }
+    }
+    function renderPlatformer() {
+      const cfg = spec.platformer;
+      root.innerHTML = '<div class="panel"><h2>平台跳跃</h2><p class="meta">A/D 移动，空格跳跃，抵达最高平台收集 ' + cfg.goalLabel + '。</p><button id="start">开始跳跃</button></div><canvas id="canvas" width="760" height="360"></canvas>';
+      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d");
+      const platforms = [{x:40,y:318,w:680},{x:150,y:258,w:140},{x:360,y:206,w:150},{x:560,y:154,w:120},{x:320,y:98,w:150}];
+      let x = 70, y = 278, vy = 0, running = false, keys = {};
+      addEventListener("keydown", e => keys[e.key.toLowerCase()] = true); addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+      document.getElementById("start").addEventListener("click", () => { x = 70; y = 278; vy = 0; running = true; loop(); });
+      function loop() {
+        if (!running) return;
+        if (keys.a || keys.arrowleft) x -= 4; if (keys.d || keys.arrowright) x += 4; x = Math.max(0, Math.min(724, x));
+        vy += 0.5; y += vy;
+        let onGround = false;
+        platforms.forEach(p => { if (x + 32 > p.x && x < p.x + p.w && y + 34 >= p.y && y + 34 <= p.y + 16 && vy >= 0) { y = p.y - 34; vy = 0; onGround = true; } });
+        if ((keys[" "] || keys.arrowup) && onGround) vy = -10;
+        if (y > 380) { running = false; return end('掉出平台，再试一次。'); }
+        ctx.clearRect(0,0,760,360); ctx.fillStyle="#f8fafc"; ctx.fillRect(0,0,760,360); ctx.fillStyle="#64748b"; platforms.forEach(p => ctx.fillRect(p.x,p.y,p.w,14));
+        ctx.fillStyle="#2563eb"; ctx.fillRect(x,y,32,34); ctx.fillStyle="#facc15"; ctx.fillRect(360,70,34,24);
+        ctx.fillStyle="#0f172a"; ctx.font="16px sans-serif"; ctx.fillText('目标：收集 ' + cfg.goalLabel, 18, 28);
+        if (x + 32 > 360 && x < 394 && y < 98) { running = false; return end('收集到 ' + cfg.goalLabel + '，平台跳跃成功！'); }
+        requestAnimationFrame(loop);
+      }
     }
     render();
   </script>

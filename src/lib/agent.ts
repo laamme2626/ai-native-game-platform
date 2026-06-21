@@ -4,6 +4,10 @@ import {
   renderGameHtml,
   validateGameSpec,
 } from "@/lib/game-spec";
+import {
+  assertSupportedPrompt,
+  UnsupportedGameTypeError,
+} from "@/lib/game-type-registry";
 import { buildLocalManifest, saveGeneratedGameAssets } from "@/lib/storage";
 import { generateGameSpecWithProvider } from "@/lib/agent/llm-provider";
 
@@ -74,6 +78,21 @@ export async function runGenerationJob(jobId: string) {
     const effectivePrompt = sourceGame
       ? `${sourceGame.prompt}\nRemix 修改要求：${job.prompt}`
       : job.prompt;
+    const requestedType = assertSupportedPrompt(effectivePrompt);
+    await log(jobId, "Requirement Parser Agent", "识别到支持的游戏类型", {
+      detectedType: requestedType.detectedType,
+      type: requestedType.type,
+      adaptationNotes: requestedType.adaptationNotes,
+    });
+    if (requestedType.adaptationNotes) {
+      await log(
+        jobId,
+        "Requirement Parser Agent",
+        "玩法需求已安全降级到现有 runtime template",
+        { adaptationNotes: requestedType.adaptationNotes },
+        "warn",
+      );
+    }
     const result = await generateGameSpecWithProvider(effectivePrompt);
     const spec = result.spec;
     await log(jobId, "Game Designer Agent", `使用 ${result.provider} provider 生成 game_spec`);
@@ -105,9 +124,10 @@ export async function runGenerationJob(jobId: string) {
     });
     await log(jobId, "Game Designer Agent", "生成多类型 game_spec.json");
 
-    validateGameSpec(spec);
+    validateGameSpec(spec, effectivePrompt);
     await log(jobId, "QA Validator Agent", "校验 game_spec schema 和可玩目标通过", {
       type: spec.type,
+      adaptationNotes: spec.adaptationNotes,
     });
 
     const game = await prisma.game.create({
@@ -172,6 +192,27 @@ export async function runGenerationJob(jobId: string) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "未知错误";
     const cost = simulatedCost(job.prompt.length, 5);
+    if (error instanceof UnsupportedGameTypeError) {
+      await prisma.generationJob.update({
+        where: { id: jobId },
+        data: { status: "failed", error: message, ...cost },
+      });
+      await log(
+        jobId,
+        "Requirement Parser Agent",
+        "识别到 unsupported game type",
+        error.toPayload(),
+        "warn",
+      );
+      await log(
+        jobId,
+        "Agent Orchestrator",
+        "生成任务终止",
+        { code: error.code, detectedType: error.detectedType, ...cost },
+        "error",
+      );
+      return;
+    }
     await prisma.generationJob.update({
       where: { id: jobId },
       data: { status: "failed", error: message, ...cost },

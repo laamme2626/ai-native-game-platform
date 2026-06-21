@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { detectRequestedGameType } from "@/lib/game-type-registry";
 import { saveUploadedAsset } from "@/lib/storage";
 
 export async function POST(request: Request) {
@@ -19,6 +20,14 @@ export async function POST(request: Request) {
   if (prompt.length > 500) {
     return NextResponse.json(
       { error: "创意描述不能超过 500 个字符" },
+      { status: 400 },
+    );
+  }
+
+  const typeDetection = detectRequestedGameType(prompt);
+  if (!typeDetection.supported) {
+    return NextResponse.json(
+      { error: typeDetection.message, ...typeDetection },
       { status: 400 },
     );
   }

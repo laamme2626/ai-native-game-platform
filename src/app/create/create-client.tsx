@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { buttonClass, Card, Panel } from "@/components/ui";
+import { supportedGameTypeLabels } from "@/lib/game-type-registry";
 
 const examples = [
   "做一个赛博城市躲避无人机的小游戏，玩家操控蓝色角色块，坚持 30 秒获胜。",
@@ -17,6 +18,10 @@ export default function CreateClient({ sourceGameId }: { sourceGameId?: string }
   const [prompt, setPrompt] = useState("");
   const [asset, setAsset] = useState<File | null>(null);
   const [error, setError] = useState("");
+  const [unsupportedType, setUnsupportedType] = useState<{
+    detectedType: string;
+    supportedTypes: string[];
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const maxLength = 500;
 
@@ -24,10 +29,12 @@ export default function CreateClient({ sourceGameId }: { sourceGameId?: string }
     event.preventDefault();
     if (prompt.trim().length < 10) {
       setError("请至少输入 10 个字符的游戏创意");
+      setUnsupportedType(null);
       return;
     }
     setIsSubmitting(true);
     setError("");
+    setUnsupportedType(null);
     const form = new FormData();
     form.set("prompt", prompt);
     if (sourceGameId) form.set("sourceGameId", sourceGameId);
@@ -36,6 +43,12 @@ export default function CreateClient({ sourceGameId }: { sourceGameId?: string }
     const payload = await response.json();
     if (!response.ok) {
       setError(payload.error ?? "创建任务失败");
+      if (payload.code === "UNSUPPORTED_GAME_TYPE") {
+        setUnsupportedType({
+          detectedType: payload.detectedType ?? "该玩法类型",
+          supportedTypes: payload.supportedTypes ?? supportedGameTypeLabels,
+        });
+      }
       setIsSubmitting(false);
       return;
     }
@@ -72,6 +85,9 @@ export default function CreateClient({ sourceGameId }: { sourceGameId?: string }
         <div className="p-5 sm:p-6">
           <label className="grid gap-3">
             <span className="text-sm font-black text-slate-950">自然语言创意</span>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-5 text-blue-900">
+              当前支持：{supportedGameTypeLabels.join("、")}。如果创意很大，请改写为轻量小游戏玩法。
+            </div>
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value.slice(0, maxLength))}
@@ -94,6 +110,16 @@ export default function CreateClient({ sourceGameId }: { sourceGameId?: string }
             <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
               {error}
             </p>
+          ) : null}
+          {unsupportedType ? (
+            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+              <p className="font-black">
+                当前 Demo 暂不支持「{unsupportedType.detectedType}」玩法。
+              </p>
+              <p className="mt-1">
+                目前支持：{unsupportedType.supportedTypes.join("、")}。请换一个轻量小游戏类型，或改写为当前支持的玩法。
+              </p>
+            </div>
           ) : null}
           <button
             disabled={isSubmitting}

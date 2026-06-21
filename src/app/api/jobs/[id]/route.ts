@@ -42,12 +42,16 @@ export async function POST(
   const { id } = await params;
   const job = await prisma.generationJob.findFirst({
     where: { id, userId: user.id },
-    select: { id: true, status: true },
+    select: { id: true, status: true, error: true },
   });
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (job.status === "queued" || job.status === "failed") {
+  if (job.status === "queued" || (job.status === "failed" && !isUnsupportedGameTypeError(job.error))) {
     await runGenerationJob(id);
   }
   return NextResponse.json({ ok: true });
+}
+
+function isUnsupportedGameTypeError(error: string | null) {
+  return Boolean(error?.includes("暂不支持"));
 }

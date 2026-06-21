@@ -93,7 +93,20 @@ export default function JobClient({ jobId }: { jobId: string }) {
 
       {job?.error ? (
         <div className="mb-5">
-          <ErrorState title="生成失败" description={job.error} />
+          <ErrorState
+            title="生成失败"
+            description={unsupportedDescription(job.error)}
+            action={
+              <div className="flex flex-wrap gap-3">
+                <Link href="/create" className={buttonClass("primary")}>
+                  返回创建页修改创意
+                </Link>
+                <Link href="/" className={buttonClass("secondary")}>
+                  返回首页
+                </Link>
+              </div>
+            }
+          />
         </div>
       ) : null}
       {message ? (
@@ -170,16 +183,18 @@ export default function JobClient({ jobId }: { jobId: string }) {
                 </dl>
               </Card>
             ) : job.status === "failed" ? (
-              <Card className="p-5">
-                <button
-                  onClick={async () => {
-                    await fetch(`/api/jobs/${jobId}`, { method: "POST" });
-                    await load();
-                  }}
-                  className={buttonClass("primary")}
-                >
-                  重试生成
-                </button>
+              <Card className="grid gap-3 p-5">
+                <p className="text-sm font-medium leading-6 text-slate-700">
+                  当前任务已失败。请返回创建页修改创意，或回到首页查看已发布游戏。
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/create" className={buttonClass("primary")}>
+                    返回创建页修改创意
+                  </Link>
+                  <Link href="/" className={buttonClass("secondary")}>
+                    返回首页
+                  </Link>
+                </div>
               </Card>
             ) : null}
 
@@ -222,4 +237,11 @@ function statusText(status: string) {
   if (status === "succeeded") return "生成成功";
   if (status === "failed") return "生成失败";
   return status;
+}
+
+function unsupportedDescription(error: string) {
+  if (error.includes("暂不支持") || error.includes("UNSUPPORTED_GAME_TYPE")) {
+    return "当前 Demo 暂不支持该玩法类型。请返回创建页，改写为当前支持的轻量小游戏玩法。";
+  }
+  return error;
 }
