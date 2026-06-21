@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import {
   checkPromptSafety,
+  normalizeGameSpecForRuntime,
   renderGameHtml,
   validateGameSpec,
 } from "@/lib/game-spec";
@@ -94,7 +95,7 @@ export async function runGenerationJob(jobId: string) {
       );
     }
     const result = await generateGameSpecWithProvider(effectivePrompt);
-    const spec = result.spec;
+    const spec = normalizeGameSpecForRuntime(result.spec);
     await log(jobId, "Game Designer Agent", `使用 ${result.provider} provider 生成 game_spec`);
     if (result.fallbackReason) {
       await log(
@@ -122,13 +123,23 @@ export async function runGenerationJob(jobId: string) {
       endings: spec.endingSceneIds.length,
       items: spec.items,
     });
-    await log(jobId, "Game Designer Agent", "生成多类型 game_spec.json");
+    await log(
+      jobId,
+      "Game Designer Agent",
+      spec.type === "side_battle" ? "生成 side_battle game_spec" : "生成多类型 game_spec.json",
+      spec.type === "side_battle" ? { sideBattle: spec.sideBattle } : undefined,
+    );
 
     validateGameSpec(spec, effectivePrompt);
-    await log(jobId, "QA Validator Agent", "校验 game_spec schema 和可玩目标通过", {
-      type: spec.type,
-      adaptationNotes: spec.adaptationNotes,
-    });
+    await log(
+      jobId,
+      "QA Validator Agent",
+      spec.type === "side_battle" ? "side_battle schema 校验通过" : "校验 game_spec schema 和可玩目标通过",
+      {
+        type: spec.type,
+        adaptationNotes: spec.adaptationNotes,
+      },
+    );
 
     const game = await prisma.game.create({
       data: {
@@ -157,10 +168,20 @@ export async function runGenerationJob(jobId: string) {
       assetUrl: job.assetUrl,
     });
     const html = renderGameHtml(spec, job.assetUrl);
-    await log(jobId, "Runtime Builder Agent", "根据 game_spec.type 生成 manifest.json 和 index.html", {
-      manifestSchemaVersion: manifest.schemaVersion,
-      gameType: spec.type,
-    });
+    if (html.includes("undefined")) {
+      throw new Error("QA Validator：生成的 index.html 不允许出现 undefined");
+    }
+    await log(
+      jobId,
+      "Runtime Builder Agent",
+      spec.type === "side_battle"
+        ? "使用 side_battle runtime template，包含 keyboard controls + game loop"
+        : "根据 game_spec.type 生成 manifest.json 和 index.html",
+      {
+        manifestSchemaVersion: manifest.schemaVersion,
+        gameType: spec.type,
+      },
+    );
 
     const saved = await saveGeneratedGameAssets({
       gameId: game.id,
@@ -168,7 +189,7 @@ export async function runGenerationJob(jobId: string) {
       manifest,
       html,
     });
-    await log(jobId, "Storage Publisher Agent", "写入对象存储 mock", saved);
+    await log(jobId, "Storage Publisher Agent", "写入 game_spec / manifest / index.html", saved);
 
     await prisma.game.update({
       where: { id: game.id },

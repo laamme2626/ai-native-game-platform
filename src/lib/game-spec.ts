@@ -60,12 +60,34 @@ export type GameSpec = {
     puzzles: { question: string; answer: string; reward: string }[];
   };
   sideBattle?: {
-    playerLabel: string;
-    enemyLabel: string;
-    playerHp: number;
-    enemyHp: number;
-    attackLabel: string;
-    defendLabel: string;
+    player?: {
+      name?: string;
+      maxHp?: number;
+      moveSpeed?: number;
+      attackDamage?: number;
+    };
+    enemy?: {
+      name?: string;
+      maxHp?: number;
+      moveSpeed?: number;
+      attackDamage?: number;
+    };
+    controls?: {
+      left?: string[];
+      right?: string[];
+      attack?: string[];
+      guard?: string[];
+      restart?: string[];
+    };
+    winCondition?: "enemy_hp_zero";
+    loseCondition?: "player_hp_zero";
+    sceneTheme?: string;
+    playerLabel?: string;
+    enemyLabel?: string;
+    playerHp?: number;
+    enemyHp?: number;
+    attackLabel?: string;
+    defendLabel?: string;
   };
   runner?: {
     playerLabel: string;
@@ -225,6 +247,14 @@ export function generateConstrainedGameSpec(prompt: string): GameSpec {
   };
 }
 
+export function normalizeGameSpecForRuntime(spec: GameSpec): GameSpec {
+  if (spec.type !== "side_battle") return spec;
+  return {
+    ...spec,
+    sideBattle: normalizeSideBattleConfig(spec),
+  };
+}
+
 function baseSpec(type: GameType, pack: ThemePack, adaptationNotes?: string): GameSpec {
   return {
     schemaVersion: 1,
@@ -381,12 +411,28 @@ function makeEscapeRoom(pack: ThemePack): NonNullable<GameSpec["escapeRoom"]> {
 
 function makeSideBattle(pack: ThemePack): NonNullable<GameSpec["sideBattle"]> {
   return {
-    playerLabel: pack.protagonist,
-    enemyLabel: pack.key === "cat_forest" ? "史莱姆守卫" : `${pack.items[1]}守卫`,
-    playerHp: 100,
-    enemyHp: 120,
-    attackLabel: `挥动${pack.items[0]}攻击`,
-    defendLabel: `用${pack.items[1]}防御`,
+    player: {
+      name: pack.key === "cat_forest" ? "小猫骑士" : pack.protagonist,
+      maxHp: 100,
+      moveSpeed: 260,
+      attackDamage: 12,
+    },
+    enemy: {
+      name: pack.key === "cat_forest" ? "史莱姆守卫" : `${pack.items[1]}守卫`,
+      maxHp: 120,
+      moveSpeed: 110,
+      attackDamage: 10,
+    },
+    controls: {
+      left: ["a", "ArrowLeft"],
+      right: ["d", "ArrowRight"],
+      attack: ["j"],
+      guard: ["k"],
+      restart: ["r"],
+    },
+    winCondition: "enemy_hp_zero",
+    loseCondition: "player_hp_zero",
+    sceneTheme: pack.key === "cat_forest" ? "月光森林" : pack.scenes[0],
   };
 }
 
@@ -409,6 +455,7 @@ function makePlatformer(pack: ThemePack): NonNullable<GameSpec["platformer"]> {
 }
 
 export function validateGameSpec(spec: GameSpec, sourcePrompt = "") {
+  const normalizedSpec = normalizeGameSpecForRuntime(spec);
   if (spec.schemaVersion !== 1) throw new Error("不支持的 game_spec 版本");
   if (!spec.title || !spec.description || !spec.type) throw new Error("game_spec 缺少必要元数据");
   if (!isSupportedGameType(spec.type)) throw new Error(`不支持的游戏类型 ${spec.type}`);
@@ -421,10 +468,10 @@ export function validateGameSpec(spec: GameSpec, sourcePrompt = "") {
   if (spec.type === "memory" && (!spec.memory || spec.memory.cards.length < 4)) throw new Error("memory 至少需要 4 张卡");
   if (spec.type === "dodge" && (!spec.dodge || spec.dodge.surviveSeconds <= 0)) throw new Error("dodge 缺少生存时间");
   if (spec.type === "escape_room" && (!spec.escapeRoom || spec.escapeRoom.puzzles.length < 1)) throw new Error("escape_room 至少需要 1 个谜题");
-  if (spec.type === "side_battle" && (!spec.sideBattle || spec.sideBattle.enemyHp <= 0)) throw new Error("side_battle 缺少对战 HP 配置");
+  if (spec.type === "side_battle") validateSideBattle(normalizedSpec);
   if (spec.type === "runner" && (!spec.runner || spec.runner.goalDistance <= 0)) throw new Error("runner 缺少跑酷距离");
   if (spec.type === "platformer" && (!spec.platformer || spec.platformer.goalHeight <= 0)) throw new Error("platformer 缺少平台目标");
-  validateTypeRuntimeMatch(spec, sourcePrompt);
+  validateTypeRuntimeMatch(normalizedSpec, sourcePrompt);
 }
 
 export function supportedGameTypePromptText() {
@@ -444,6 +491,61 @@ function validateTypeRuntimeMatch(spec: GameSpec, sourcePrompt: string) {
   }
   if (!JSON.stringify(spec).includes("undefined")) return;
   throw new Error("QA Validator：game_spec 不允许出现 undefined");
+}
+
+function validateSideBattle(spec: GameSpec) {
+  const cfg = normalizeSideBattleConfig(spec);
+  if (!cfg.player.name || !cfg.enemy.name) throw new Error("side_battle 必须包含玩家和敌人名称");
+  if (cfg.player.maxHp <= 0 || cfg.enemy.maxHp <= 0) throw new Error("side_battle 必须包含有效 HP");
+  if (cfg.player.attackDamage <= 0 || cfg.enemy.attackDamage <= 0) throw new Error("side_battle 必须包含有效攻击伤害");
+  if (!cfg.controls.left.length || !cfg.controls.right.length || !cfg.controls.attack.length || !cfg.controls.guard.length) {
+    throw new Error("side_battle 必须包含移动、攻击、防御 controls");
+  }
+}
+
+function normalizeSideBattleConfig(spec: GameSpec) {
+  const cfg = spec.sideBattle ?? {};
+  const player = cfg.player ?? {};
+  const enemy = cfg.enemy ?? {};
+  const controls = cfg.controls ?? {};
+  return {
+    player: {
+      name: stringOrFallback(player.name ?? cfg.playerLabel, "玩家"),
+      maxHp: positiveNumber(player.maxHp ?? cfg.playerHp, 100),
+      moveSpeed: positiveNumber(player.moveSpeed, 260),
+      attackDamage: positiveNumber(player.attackDamage, 12),
+    },
+    enemy: {
+      name: stringOrFallback(enemy.name ?? cfg.enemyLabel, "敌人"),
+      maxHp: positiveNumber(enemy.maxHp ?? cfg.enemyHp, 120),
+      moveSpeed: positiveNumber(enemy.moveSpeed, 110),
+      attackDamage: positiveNumber(enemy.attackDamage, 10),
+    },
+    controls: {
+      left: nonEmptyStringArray(controls.left, ["a", "ArrowLeft"]),
+      right: nonEmptyStringArray(controls.right, ["d", "ArrowRight"]),
+      attack: nonEmptyStringArray(controls.attack, ["j"]),
+      guard: nonEmptyStringArray(controls.guard, ["k"]),
+      restart: nonEmptyStringArray(controls.restart, ["r"]),
+    },
+    winCondition: cfg.winCondition ?? "enemy_hp_zero",
+    loseCondition: cfg.loseCondition ?? "player_hp_zero",
+    sceneTheme: stringOrFallback(cfg.sceneTheme, "训练场"),
+  };
+}
+
+function stringOrFallback(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function positiveNumber(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function nonEmptyStringArray(value: unknown, fallback: string[]) {
+  return Array.isArray(value) && value.some((item) => typeof item === "string" && item.trim())
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : fallback;
 }
 
 function validateChoice(spec: GameSpec) {
@@ -620,33 +722,92 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
       draw();
     }
     function renderSideBattle() {
-      const cfg = spec.sideBattle;
-      root.innerHTML = '<div class="panel"><h2>横屏对战</h2><p class="meta">A/D 移动，J 攻击，K 防御。击败 ' + cfg.enemyLabel + ' 获胜。</p><button id="start">开始对战</button></div><canvas id="canvas" width="760" height="360"></canvas>';
-      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d");
-      let playerX = 120, enemyX = 600, playerHp = cfg.playerHp, enemyHp = cfg.enemyHp, defending = false, running = false, keys = {}, cooldown = 0, enemyCooldown = 0;
-      addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-      addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; if (e.key.toLowerCase() === "k") defending = false; });
-      document.getElementById("start").addEventListener("click", () => { playerX = 120; enemyX = 600; playerHp = cfg.playerHp; enemyHp = cfg.enemyHp; running = true; cooldown = 0; enemyCooldown = 0; loop(); });
-      function bar(x, y, w, hp, max, color) { ctx.fillStyle="#e2e8f0"; ctx.fillRect(x,y,w,14); ctx.fillStyle=color; ctx.fillRect(x,y,Math.max(0,w*hp/max),14); ctx.strokeStyle="#334155"; ctx.strokeRect(x,y,w,14); }
-      function drawFighter(x, label, color, facing) { ctx.fillStyle=color; ctx.fillRect(x,240,48,70); ctx.fillStyle="#0f172a"; ctx.font="14px sans-serif"; ctx.fillText(label.slice(0,8), x - 14, 232); ctx.fillStyle="#facc15"; ctx.fillRect(facing > 0 ? x + 42 : x - 18, 264, 24, 8); }
-      function loop() {
-        if (!running) return;
-        cooldown = Math.max(0, cooldown - 1); enemyCooldown = Math.max(0, enemyCooldown - 1);
-        if (keys.a || keys.arrowleft) playerX -= 4.6; if (keys.d || keys.arrowright) playerX += 4.6; playerX = Math.max(20, Math.min(690, playerX));
-        enemyX += enemyX > playerX ? -1.9 : 1.9; enemyX = Math.max(20, Math.min(690, enemyX));
-        defending = !!keys.k;
-        const distance = Math.abs(enemyX - playerX);
-        if (keys.j && cooldown <= 0 && distance < 86) { enemyHp -= 14; cooldown = 28; }
-        if (enemyCooldown <= 0 && distance < 74) { playerHp -= defending ? 4 : 12; enemyCooldown = 42; }
-        ctx.clearRect(0,0,760,360); ctx.fillStyle="#dbeafe"; ctx.fillRect(0,0,760,360); ctx.fillStyle="#94a3b8"; ctx.fillRect(0,310,760,18);
-        bar(28,24,220,playerHp,cfg.playerHp,"#2563eb"); bar(512,24,220,enemyHp,cfg.enemyHp,"#dc2626");
-        ctx.fillStyle="#0f172a"; ctx.font="16px sans-serif"; ctx.fillText("玩家 HP",28,18); ctx.fillText("敌人 HP",512,18);
-        drawFighter(playerX,cfg.playerLabel,"#2563eb",1); drawFighter(enemyX,cfg.enemyLabel,"#dc2626",-1);
-        if (defending) { ctx.strokeStyle="#22c55e"; ctx.lineWidth=4; ctx.strokeRect(playerX-8,232,64,86); }
-        if (enemyHp <= 0) { running = false; return end('你击败了 ' + cfg.enemyLabel + '，横屏对战胜利！'); }
-        if (playerHp <= 0) { running = false; return end('HP 归零，对战失败。'); }
-        requestAnimationFrame(loop);
+      const cfg = normalizeSideBattle(spec.sideBattle);
+      root.innerHTML = '<div class="panel"><h2>横屏对战</h2><p class="meta">点击开始后游戏区域会获得焦点。A/D 或方向键移动，J 攻击，K 防御，R 重开。击败 ' + cfg.enemy.name + ' 获胜。</p><div class="row"><button id="start">开始对战</button><button class="secondary" id="restart">重新开始</button><span id="battle-status" class="meta">等待开始</span></div></div><canvas id="canvas" tabindex="0" aria-label="横屏对战游戏区域" width="760" height="360"></canvas>';
+      const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d"), status = document.getElementById("battle-status");
+      const keys = {};
+      const state = { playerX: 120, enemyX: 600, playerHp: cfg.player.maxHp, enemyHp: cfg.enemy.maxHp, running: false, ended: false, playerCooldown: 0, enemyCooldown: 0, hitFlash: 0, playerFlash: 0, lastTime: 0, message: "点击开始对战" };
+      function keyId(value) { return String(value || "").toLowerCase(); }
+      function uses(list, key) { return list.map(keyId).includes(keyId(key)); }
+      function onKeyDown(e) { keys[keyId(e.key)] = true; if (uses(cfg.controls.restart, e.key)) { e.preventDefault(); reset(true); } if (["arrowleft","arrowright"," ","j","k","r"].includes(keyId(e.key))) e.preventDefault(); }
+      function onKeyUp(e) { keys[keyId(e.key)] = false; if (["arrowleft","arrowright"," ","j","k","r"].includes(keyId(e.key))) e.preventDefault(); }
+      canvas.addEventListener("keydown", onKeyDown);
+      canvas.addEventListener("keyup", onKeyUp);
+      canvas.addEventListener("click", () => canvas.focus());
+      document.getElementById("start").addEventListener("click", () => reset(true));
+      document.getElementById("restart").addEventListener("click", () => reset(true));
+      function reset(start) {
+        Object.keys(keys).forEach(key => keys[key] = false);
+        state.playerX = 120; state.enemyX = 600; state.playerHp = cfg.player.maxHp; state.enemyHp = cfg.enemy.maxHp;
+        state.running = !!start; state.ended = false; state.playerCooldown = 0; state.enemyCooldown = 0; state.hitFlash = 0; state.playerFlash = 0; state.lastTime = 0;
+        state.message = start ? "战斗中：靠近后按 J 攻击，按 K 防御。" : "点击开始对战";
+        canvas.focus(); draw();
+        if (start) requestAnimationFrame(loop);
       }
+      function isPressed(list) { return list.some(key => keys[keyId(key)]); }
+      function hpBar(x, y, w, hp, max, color, label) {
+        ctx.fillStyle="#e2e8f0"; ctx.fillRect(x,y,w,16); ctx.fillStyle=color; ctx.fillRect(x,y,Math.max(0,w*hp/max),16); ctx.strokeStyle="#334155"; ctx.strokeRect(x,y,w,16);
+        ctx.fillStyle="#0f172a"; ctx.font="14px sans-serif"; ctx.fillText(label + " " + Math.max(0, Math.ceil(hp)) + "/" + max, x, y - 7);
+      }
+      function fighter(x, label, color, flash, facing) {
+        ctx.fillStyle = flash > 0 ? "#fde047" : color; ctx.fillRect(x,238,48,72);
+        ctx.fillStyle="#0f172a"; ctx.font="14px sans-serif"; ctx.fillText(label.slice(0,10), Math.max(8, x - 18), 228);
+        ctx.fillStyle="#facc15"; ctx.fillRect(facing > 0 ? x + 42 : x - 18, 265, 24, 8);
+      }
+      function draw() {
+        ctx.clearRect(0,0,760,360);
+        ctx.fillStyle="#dbeafe"; ctx.fillRect(0,0,760,360);
+        ctx.fillStyle="#bfdbfe"; ctx.fillRect(0,58,760,252);
+        ctx.fillStyle="#64748b"; ctx.fillRect(0,310,760,18);
+        ctx.fillStyle="#1e293b"; ctx.font="16px sans-serif"; ctx.fillText(cfg.sceneTheme, 340, 44);
+        hpBar(28,30,230,state.playerHp,cfg.player.maxHp,"#2563eb",cfg.player.name);
+        hpBar(502,30,230,state.enemyHp,cfg.enemy.maxHp,"#dc2626",cfg.enemy.name);
+        fighter(state.playerX, cfg.player.name, "#2563eb", state.playerFlash, 1);
+        fighter(state.enemyX, cfg.enemy.name, "#dc2626", state.hitFlash, -1);
+        if (isPressed(cfg.controls.guard) && state.running) { ctx.strokeStyle="#22c55e"; ctx.lineWidth=4; ctx.strokeRect(state.playerX-8,230,64,90); }
+        ctx.fillStyle="#0f172a"; ctx.font="15px sans-serif"; ctx.fillText(state.message, 24, 350);
+        status.textContent = state.message;
+      }
+      function finish(message) { state.running = false; state.ended = true; state.message = message + " 按 R 或点击重新开始。"; draw(); }
+      function loop(now) {
+        if (!state.running || state.ended) return;
+        const dt = Math.min(0.033, state.lastTime ? (now - state.lastTime) / 1000 : 0.016); state.lastTime = now;
+        const playerDir = (isPressed(cfg.controls.right) ? 1 : 0) - (isPressed(cfg.controls.left) ? 1 : 0);
+        state.playerX = Math.max(20, Math.min(692, state.playerX + playerDir * cfg.player.moveSpeed * dt));
+        const distance = Math.abs(state.enemyX - state.playerX);
+        if (distance > 68) state.enemyX += (state.enemyX > state.playerX ? -1 : 1) * cfg.enemy.moveSpeed * dt;
+        state.enemyX = Math.max(20, Math.min(692, state.enemyX));
+        state.playerCooldown = Math.max(0, state.playerCooldown - dt); state.enemyCooldown = Math.max(0, state.enemyCooldown - dt);
+        state.hitFlash = Math.max(0, state.hitFlash - dt); state.playerFlash = Math.max(0, state.playerFlash - dt);
+        if (isPressed(cfg.controls.attack) && state.playerCooldown <= 0) {
+          state.playerCooldown = 0.38;
+          if (distance < 92) { state.enemyHp = Math.max(0, state.enemyHp - cfg.player.attackDamage); state.enemyX += state.enemyX > state.playerX ? 14 : -14; state.hitFlash = 0.18; state.message = "命中 " + cfg.enemy.name + "，造成 " + cfg.player.attackDamage + " 点伤害。"; }
+          else state.message = "攻击落空，靠近敌人再出手。";
+        }
+        if (state.enemyCooldown <= 0 && distance < 78) {
+          state.enemyCooldown = 0.8;
+          const guarding = isPressed(cfg.controls.guard);
+          const damage = guarding ? Math.ceil(cfg.enemy.attackDamage * 0.35) : cfg.enemy.attackDamage;
+          state.playerHp = Math.max(0, state.playerHp - damage); state.playerFlash = 0.18;
+          state.message = guarding ? "防御成功，受到 " + damage + " 点伤害。" : cfg.enemy.name + " 命中你，受到 " + damage + " 点伤害。";
+        }
+        if (state.enemyHp <= 0) return finish("胜利！你击败了 " + cfg.enemy.name + "。");
+        if (state.playerHp <= 0) return finish("失败，" + cfg.player.name + " HP 归零。");
+        draw(); requestAnimationFrame(loop);
+      }
+      function normalizeSideBattle(raw) {
+        raw = raw || {}; const player = raw.player || {}; const enemy = raw.enemy || {}; const controls = raw.controls || {};
+        const text = (value, fallback) => typeof value === "string" && value.trim() ? value.trim() : fallback;
+        const num = (value, fallback) => typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+        const arr = (value, fallback) => Array.isArray(value) && value.length ? value : fallback;
+        return {
+          player: { name: text(player.name || raw.playerLabel, "玩家"), maxHp: num(player.maxHp || raw.playerHp, 100), moveSpeed: num(player.moveSpeed, 260), attackDamage: num(player.attackDamage, 12) },
+          enemy: { name: text(enemy.name || raw.enemyLabel, "敌人"), maxHp: num(enemy.maxHp || raw.enemyHp, 120), moveSpeed: num(enemy.moveSpeed, 110), attackDamage: num(enemy.attackDamage, 10) },
+          controls: { left: arr(controls.left, ["a","ArrowLeft"]), right: arr(controls.right, ["d","ArrowRight"]), attack: arr(controls.attack, ["j"]), guard: arr(controls.guard, ["k"]), restart: arr(controls.restart, ["r"]) },
+          sceneTheme: text(raw.sceneTheme, "训练场")
+        };
+      }
+      reset(false);
     }
     function renderRunner() {
       const cfg = spec.runner;
