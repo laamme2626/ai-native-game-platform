@@ -175,7 +175,7 @@ public/generated/games/{gameId}/
 - unsupported type 处理方向。
 - AI 协作记录和验证文档。
 
-## 6. 如果再给 1 周的迭代计划
+## 6. 未来 1 周的迭代计划
 
 ### Day 1-2：Game Type Registry 与 Intent Recognition
 
