@@ -59,7 +59,7 @@ async function callOpenAICompatible(prompt: string, apiKey: string) {
         {
           role: "system",
           content:
-            `你是受约束的 game_spec 生成器。只输出 JSON，不输出 Markdown。schemaVersion 必须为 1。type 只能从 supported game types 中选择：${supportedGameTypeValues.join("、")}。必须包含 title、description、theme、protagonist、visualStyle、playerGoal、tags、items、stats、scenes、endingSceneIds，并按 type 补齐 quiz/clicker/memory/dodge/escapeRoom/sideBattle/runner/platformer 字段。side_battle 必须使用 sideBattle.player/name/maxHp/moveSpeed/attackDamage、sideBattle.enemy/name/maxHp/moveSpeed/attackDamage、sideBattle.controls/left/right/attack/guard/restart、winCondition、loseCondition、sceneTheme。不能把不匹配玩法塞进其他 type：横屏对战不能塞进 dodge，赛车不能塞进 runner 除非明确降级为轻量横版跑酷并写 adaptationNotes，音游不能塞进 clicker。如果需要降级，必须写 adaptationNotes，并且仍然匹配 runtime template；无法合理降级时应返回 unsupported type 错误对象，不要生成坏 spec。不要输出任意 JS、HTML、外链脚本或密钥。`,
+            `你是受约束的 game_spec 生成器。只输出 JSON，不输出 Markdown。schemaVersion 必须为 1。type 只能从 supported game types 中选择：${supportedGameTypeValues.join("、")}。必须包含 title、description、theme、protagonist、visualStyle、playerGoal、tags、items、stats、scenes、endingSceneIds，并按 type 补齐 quiz/clicker/memory/dodge/escapeRoom/sideBattle/runner/platformer 字段。side_battle 必须使用 sideBattle.player/name/maxHp/moveSpeed/attackDamage、sideBattle.enemy/name/maxHp/moveSpeed/attackDamage、sideBattle.controls/left/right/attack/guard/restart、winCondition、loseCondition、sceneTheme；默认玩家 moveSpeed 建议 380，敌人 155，如果用户要求更快/更慢或指定速度，必须体现在 moveSpeed 字段中。不能把不匹配玩法塞进其他 type：横屏对战不能塞进 dodge，赛车不能塞进 runner 除非明确降级为轻量横版跑酷并写 adaptationNotes，音游不能塞进 clicker。如果需要降级，必须写 adaptationNotes，并且仍然匹配 runtime template；无法合理降级时应返回 unsupported type 错误对象，不要生成坏 spec。不要输出任意 JS、HTML、外链脚本或密钥。`,
         },
         { role: "user", content: prompt },
       ],

@@ -241,7 +241,7 @@ export function generateConstrainedGameSpec(prompt: string): GameSpec {
     memory: type === "memory" ? makeMemory(pack) : undefined,
     dodge: type === "dodge" ? makeDodge(pack) : undefined,
     escapeRoom: type === "escape_room" ? makeEscapeRoom(pack) : undefined,
-    sideBattle: type === "side_battle" ? makeSideBattle(pack) : undefined,
+    sideBattle: type === "side_battle" ? makeSideBattle(pack, idea) : undefined,
     runner: type === "runner" ? makeRunner(pack) : undefined,
     platformer: type === "platformer" ? makePlatformer(pack) : undefined,
   };
@@ -409,18 +409,19 @@ function makeEscapeRoom(pack: ThemePack): NonNullable<GameSpec["escapeRoom"]> {
   };
 }
 
-function makeSideBattle(pack: ThemePack): NonNullable<GameSpec["sideBattle"]> {
+function makeSideBattle(pack: ThemePack, prompt: string): NonNullable<GameSpec["sideBattle"]> {
+  const tuning = sideBattleTuning(prompt);
   return {
     player: {
       name: pack.key === "cat_forest" ? "小猫骑士" : pack.protagonist,
       maxHp: 100,
-      moveSpeed: 260,
+      moveSpeed: tuning.playerMoveSpeed,
       attackDamage: 12,
     },
     enemy: {
       name: pack.key === "cat_forest" ? "史莱姆守卫" : `${pack.items[1]}守卫`,
       maxHp: 120,
-      moveSpeed: 110,
+      moveSpeed: tuning.enemyMoveSpeed,
       attackDamage: 10,
     },
     controls: {
@@ -434,6 +435,63 @@ function makeSideBattle(pack: ThemePack): NonNullable<GameSpec["sideBattle"]> {
     loseCondition: "player_hp_zero",
     sceneTheme: pack.key === "cat_forest" ? "月光森林" : pack.scenes[0],
   };
+}
+
+function sideBattleTuning(prompt: string) {
+  const text = prompt.toLowerCase();
+  let playerMoveSpeed = 380;
+  let enemyMoveSpeed = 155;
+
+  if (/很快|更快|高速|快速|敏捷|灵敏|加快|速度快|移动快|fast|faster|speedy/.test(text)) {
+    playerMoveSpeed = 470;
+    enemyMoveSpeed = 190;
+  }
+  if (/非常快|特别快|超快|飞快|极速|very fast|super fast/.test(text)) {
+    playerMoveSpeed = 560;
+    enemyMoveSpeed = 230;
+  }
+  if (/慢一点|较慢|慢速|速度慢|移动慢|slow|slower/.test(text)) {
+    playerMoveSpeed = 270;
+    enemyMoveSpeed = 110;
+  }
+
+  const playerSpeed = extractSpeed(text, [
+    /玩家(?:移动)?速度\s*(?:为|设为|设置为|调到|=|:|：)?\s*(\d{2,4})/,
+    /角色(?:移动)?速度\s*(?:为|设为|设置为|调到|=|:|：)?\s*(\d{2,4})/,
+    /moveSpeed\s*(?:=|:)?\s*(\d{2,4})/,
+  ]);
+  const enemySpeed = extractSpeed(text, [
+    /敌人(?:移动)?速度\s*(?:为|设为|设置为|调到|=|:|：)?\s*(\d{2,4})/,
+    /enemy(?:\s*move)?speed\s*(?:=|:)?\s*(\d{2,4})/,
+  ]);
+  const generalSpeed = extractSpeed(text, [
+    /(?:移动)?速度\s*(?:为|设为|设置为|调到|=|:|：)?\s*(\d{2,4})/,
+    /speed\s*(?:=|:)?\s*(\d{2,4})/,
+  ]);
+
+  if (generalSpeed) {
+    playerMoveSpeed = generalSpeed;
+    enemyMoveSpeed = Math.round(generalSpeed * 0.42);
+  }
+  if (playerSpeed) playerMoveSpeed = playerSpeed;
+  if (enemySpeed) enemyMoveSpeed = enemySpeed;
+
+  return {
+    playerMoveSpeed: clamp(playerMoveSpeed, 160, 760),
+    enemyMoveSpeed: clamp(enemyMoveSpeed, 70, 420),
+  };
+}
+
+function extractSpeed(text: string, patterns: RegExp[]) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function makeRunner(pack: ThemePack): NonNullable<GameSpec["runner"]> {
@@ -512,13 +570,13 @@ function normalizeSideBattleConfig(spec: GameSpec) {
     player: {
       name: stringOrFallback(player.name ?? cfg.playerLabel, "玩家"),
       maxHp: positiveNumber(player.maxHp ?? cfg.playerHp, 100),
-      moveSpeed: positiveNumber(player.moveSpeed, 260),
+      moveSpeed: positiveNumber(player.moveSpeed, 380),
       attackDamage: positiveNumber(player.attackDamage, 12),
     },
     enemy: {
       name: stringOrFallback(enemy.name ?? cfg.enemyLabel, "敌人"),
       maxHp: positiveNumber(enemy.maxHp ?? cfg.enemyHp, 120),
-      moveSpeed: positiveNumber(enemy.moveSpeed, 110),
+      moveSpeed: positiveNumber(enemy.moveSpeed, 155),
       attackDamage: positiveNumber(enemy.attackDamage, 10),
     },
     controls: {
@@ -801,8 +859,8 @@ export function renderGameHtml(spec: GameSpec, assetUrl?: string | null) {
         const num = (value, fallback) => typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
         const arr = (value, fallback) => Array.isArray(value) && value.length ? value : fallback;
         return {
-          player: { name: text(player.name || raw.playerLabel, "玩家"), maxHp: num(player.maxHp || raw.playerHp, 100), moveSpeed: num(player.moveSpeed, 260), attackDamage: num(player.attackDamage, 12) },
-          enemy: { name: text(enemy.name || raw.enemyLabel, "敌人"), maxHp: num(enemy.maxHp || raw.enemyHp, 120), moveSpeed: num(enemy.moveSpeed, 110), attackDamage: num(enemy.attackDamage, 10) },
+          player: { name: text(player.name || raw.playerLabel, "玩家"), maxHp: num(player.maxHp || raw.playerHp, 100), moveSpeed: num(player.moveSpeed, 380), attackDamage: num(player.attackDamage, 12) },
+          enemy: { name: text(enemy.name || raw.enemyLabel, "敌人"), maxHp: num(enemy.maxHp || raw.enemyHp, 120), moveSpeed: num(enemy.moveSpeed, 155), attackDamage: num(enemy.attackDamage, 10) },
           controls: { left: arr(controls.left, ["a","ArrowLeft"]), right: arr(controls.right, ["d","ArrowRight"]), attack: arr(controls.attack, ["j"]), guard: arr(controls.guard, ["k"]), restart: arr(controls.restart, ["r"]) },
           sceneTheme: text(raw.sceneTheme, "训练场")
         };
