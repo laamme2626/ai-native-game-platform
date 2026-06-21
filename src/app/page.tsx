@@ -66,13 +66,12 @@ export default async function Home({
             <ButtonLink href="/create" className="min-w-28 px-5 shadow-sm shadow-blue-950/20">
               开始创建
             </ButtonLink>
-            <ButtonLink
+            <Link
               href="#games"
-              variant="secondary"
-              className="min-w-28 border-white/80 bg-white px-5 text-slate-950 shadow-sm hover:bg-slate-50"
+              className="inline-flex h-14 items-center justify-center rounded-2xl border border-white/45 bg-slate-950/55 px-8 text-base font-bold text-white shadow-sm transition hover:border-white/70 hover:bg-slate-900/80 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
             >
               浏览游戏
-            </ButtonLink>
+            </Link>
           </div>
         </div>
       </section>
